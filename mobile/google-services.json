@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "986952569979",
+    "project_id": "clearhost-c8919",
+    "storage_bucket": "clearhost-c8919.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:986952569979:android:956180c97039c80f8cbede",
+        "android_client_info": {
+          "package_name": "com.clearhost.staff"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWy6yTsByw_nC1UQIZrUaOfT8lHkZTe0g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

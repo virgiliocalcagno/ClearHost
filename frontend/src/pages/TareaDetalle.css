@@ -1,0 +1,33 @@
+.td-content { padding: 0 20px 120px; }
+.td-prop-card { margin-bottom: 16px; }
+.td-prop-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.td-prop-top h3 { font-size: 18px; font-weight: 700; }
+.td-address { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
+.td-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--divider);
+}
+.td-info-item { display: flex; flex-direction: column; gap: 2px; }
+.td-info-label { font-size: 12px; color: var(--text-tertiary); }
+.td-info-value { font-size: 14px; font-weight: 600; }
+
+/* Actions */
+.td-actions { display: flex; flex-direction: column; gap: 10px; }
+.td-action-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px; cursor: pointer;
+  transition: transform 0.15s;
+}
+.td-action-card:active { transform: scale(0.98); }
+.td-action-icon {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.td-action-info { flex: 1; }
+.td-action-info h4 { font-size: 15px; font-weight: 700; }
+.td-action-info p { font-size: 12px; color: var(--text-secondary); }
+.td-action-arrow { font-size: 24px; color: var(--text-tertiary); font-weight: 300; }

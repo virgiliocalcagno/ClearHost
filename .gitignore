@@ -1,0 +1,6 @@
+node_modules/
+*.env
+.env
+*serviceAccountKey.json
+Proyecto_ZONA_ENCARAMAO/serviceAccountKey.json
+*firebase-credentials.json

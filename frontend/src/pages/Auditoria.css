@@ -1,0 +1,136 @@
+/* Contenedor de Auditoría */
+.aud-content { 
+  padding: 0 20px 100px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Estadísticas Superiores */
+.aud-stats { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 12px; 
+  margin-bottom: 20px; 
+}
+
+.stat-card {
+  padding: 12px;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-top: 4px solid var(--border);
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover { transform: translateY(-3px); }
+
+.stat-done { border-top-color: var(--success); }
+.stat-pending { border-top-color: var(--error); }
+.stat-num { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+.stat-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-top: 2px; }
+
+/* Advertencias */
+.aud-warning {
+  background: rgba(255, 145, 0, 0.1);
+  color: #d35400;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(255, 145, 0, 0.05);
+  font-size: 14px; 
+  font-weight: 600;
+  margin-bottom: 20px;
+  border-left: 4px solid var(--warning);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+/* Lista de Items */
+.aud-list { display: flex; flex-direction: column; gap: 12px; }
+
+.aud-item { 
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.aud-item:hover {
+  background: white;
+  box-shadow: var(--shadow-md);
+  transform: scale(1.01);
+}
+
+.aud-item-top { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 16px; 
+}
+
+.aud-item-top h4 { 
+  font-size: 16px; 
+  font-weight: 700; 
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Botón de Estado Cíclico */
+.aud-estado-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 11px; 
+  font-weight: 800;
+  border: none; 
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aud-estado-btn:active { transform: scale(0.92); }
+
+.aud-ok       { background: var(--success); color: white; }
+.aud-faltante { background: var(--error); color: white; }
+.aud-dañado   { background: var(--warning); color: white; }
+
+/* Control de Cantidad */
+.aud-qty {
+  display: flex; align-items: center; gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+}
+
+.aud-qty-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+
+.aud-qty-input {
+  width: 64px; 
+  text-align: center;
+  padding: 10px; 
+  border: 2px solid var(--border);
+  background: var(--bg);
+  border-radius: var(--radius-md);
+  font-size: 18px; 
+  font-weight: 800;
+  color: var(--primary);
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.aud-qty-input:focus { 
+  outline: none; 
+  border-color: var(--primary); 
+  background: white;
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+.aud-qty-expected { 
+  font-size: 15px; 
+  font-weight: 600; 
+  color: var(--text-tertiary); 
+}

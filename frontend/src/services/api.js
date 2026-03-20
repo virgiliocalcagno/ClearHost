@@ -1,0 +1,82 @@
+/**
+ * ClearHost Staff — Servicio API.
+ */
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_BASE || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:8000/api');
+
+export const STATIC_BASE = import.meta.env.PROD 
+  ? '' 
+  : 'http://localhost:8000';
+
+const api = axios.create({
+  baseURL: API_BASE,
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Interceptor: agregar token JWT
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// ========== AUTH ==========
+export const login = async (email, password) => {
+  const res = await api.post('/staff/login', { email, password });
+  localStorage.setItem('auth_token', res.data.access_token);
+  localStorage.setItem('staff_data', JSON.stringify(res.data.staff));
+  return res.data;
+};
+
+export const logout = () => {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('staff_data');
+};
+
+export const getStoredStaff = () => {
+  const data = localStorage.getItem('staff_data');
+  return data ? JSON.parse(data) : null;
+};
+
+export const isAuthenticated = () => !!localStorage.getItem('auth_token');
+
+// ========== TAREAS ==========
+export const getTareasDeHoy = async (staffId) => {
+  const res = await api.get(`/tareas/hoy/${staffId}`);
+  return res.data;
+};
+
+export const getTareaDetalle = async (tareaId) => {
+  const res = await api.get(`/tareas/${tareaId}`);
+  return res.data;
+};
+
+export const actualizarChecklist = async (tareaId, checklist) => {
+  const res = await api.put(`/tareas/${tareaId}/checklist`, { checklist });
+  return res.data;
+};
+
+export const actualizarAuditoria = async (tareaId, auditoria_activos) => {
+  const res = await api.put(`/tareas/${tareaId}/auditoria`, { auditoria_activos });
+  return res.data;
+};
+
+export const subirFoto = async (tareaId, tipo, file) => {
+  const formData = new FormData();
+  formData.append('tipo', tipo);
+  formData.append('foto', file);
+  const res = await api.post(`/tareas/${tareaId}/fotos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};
+
+export const completarTarea = async (tareaId) => {
+  const res = await api.put(`/tareas/${tareaId}/completar`);
+  return res.data;
+};
+
+export default api;
