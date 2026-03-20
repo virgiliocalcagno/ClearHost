@@ -9,6 +9,7 @@ const fetchPropiedades = () => api.get('/propiedades/').then(r => r.data);
 const fetchReservas = () => api.get('/reservas/').then(r => r.data);
 const fetchTareas = () => api.get('/tareas/').then(r => r.data);
 const fetchStaff = () => api.get('/staff/').then(r => r.data);
+const fetchIncidencias = () => api.get('/incidencias/').then(r => r.data);
 
 const crearPropiedad = (data) => api.post('/propiedades/', data).then(r => r.data);
 const actualizarPropiedad = (id, data) => api.put(`/propiedades/${id}`, data).then(r => r.data);
@@ -28,6 +29,8 @@ const asignarTarea = (id, staffId) => {
 };
 const autoAsignarTareas = () => api.post('/tareas/auto-asignar').then(r => r.data);
 const syncIcal = (propId) => api.post(`/reservas/sync-ical/${propId}`).then(r => r.data);
+const actualizarIncidencia = (id, data) => api.put(`/incidencias/${id}`, data).then(r => r.data);
+const crearIncidencia = (data) => api.post('/incidencias/', data).then(r => r.data);
 
 // ─── Tab config ───
 const TABS = [
@@ -35,6 +38,7 @@ const TABS = [
   { id: 'propiedades', label: 'Propiedades', icon: '🏠' },
   { id: 'reservas', label: 'Reservas', icon: '📅' },
   { id: 'tareas', label: 'Tareas', icon: '🧹' },
+  { id: 'mantenimiento', label: 'Mantenimiento', icon: '🔧' },
   { id: 'staff', label: 'Staff', icon: '👥' },
 ];
 
@@ -42,7 +46,7 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const staff = getStoredStaff();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [data, setData] = useState({ propiedades: [], reservas: [], tareas: [], staff: [] });
+  const [data, setData] = useState({ propiedades: [], reservas: [], tareas: [], staff: [], incidencias: [] });
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState('');
@@ -55,10 +59,10 @@ export default function AdminPanel() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [propiedades, reservas, tareas, staffList] = await Promise.all([
-        fetchPropiedades(), fetchReservas(), fetchTareas(), fetchStaff(),
+      const [propiedades, reservas, tareas, staffList, incidencias] = await Promise.all([
+        fetchPropiedades(), fetchReservas(), fetchTareas(), fetchStaff(), fetchIncidencias()
       ]);
-      setData({ propiedades, reservas, tareas, staff: staffList });
+      setData({ propiedades, reservas, tareas, staff: staffList, incidencias });
     } catch (err) {
       console.error('Error cargando datos:', err);
     } finally {
@@ -129,6 +133,15 @@ export default function AdminPanel() {
 
         {activeTab === 'staff' && (
           <StaffTab data={data.staff} onAction={setModal} onRefresh={loadAll} showToast={showToast} />
+        )}
+        {activeTab === 'mantenimiento' && (
+          <MantenimientoTab 
+            data={data.incidencias} 
+            propiedades={data.propiedades} 
+            onRefresh={loadAll} 
+            showToast={showToast} 
+            onAction={setModal}
+          />
         )}
 
       </main>
@@ -679,6 +692,154 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
 // ═══════════════════════════════════════════
 // Staff Tab
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// Mantenimiento Tab
+// ═══════════════════════════════════════════
+function MantenimientoTab({ data, propiedades, onRefresh, showToast, onAction }) {
+  const [filterProp, setFilterProp] = useState('');
+  
+  const filtered = filterProp ? data.filter(i => i.propiedad_id === filterProp) : data;
+
+  const handleUpdateEstado = async (id, nuevoEstado) => {
+    try {
+      await actualizarIncidencia(id, { estado: nuevoEstado });
+      showToast('Estado actualizado');
+      onRefresh();
+    } catch (e) {
+      alert('Error al actualizar estado');
+    }
+  };
+
+  const getPublicLink = (token) => {
+    if (!token) return null;
+    return `${window.location.origin}/reparacion/aprobar/${token}`;
+  };
+
+  const copyLink = (token) => {
+    const link = getPublicLink(token);
+    navigator.clipboard.writeText(link);
+    alert('Link de aprobación copiado. Envíalo al propietario.');
+  };
+
+  return (
+    <div className="admin-fade-in">
+      <div className="admin-topbar">
+        <div>
+          <h2>Mantenimiento y Reparaciones</h2>
+          <div className="topbar-subtitle">Control de daños, compras y mantenimiento preventivo</div>
+        </div>
+        <div className="topbar-actions">
+           <select 
+            className="select-field" 
+            style={{width: 200, marginRight: 10}}
+            value={filterProp}
+            onChange={e => setFilterProp(e.target.value)}
+          >
+            <option value="">Todas las propiedades</option>
+            {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+          <button className="btn-admin btn-admin-primary" onClick={() => onAction({ type: 'incidencia' })}>
+            ＋ Reportar Incidencia
+          </button>
+        </div>
+      </div>
+
+      <div className="admin-table-wrapper">
+        <div className="admin-table-header">
+          <h3>Lista de Incidencias</h3>
+          <span className="table-count">{filtered.length} reportes</span>
+        </div>
+        {filtered.length === 0 ? (
+          <div className="admin-empty">
+             <div className="empty-icon">🔧</div>
+             <h4>Sin incidencias</h4>
+             <p>Todo está al día en tus propiedades.</p>
+          </div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Ficha / Título</th>
+                <th>Propiedad</th>
+                <th>Tipo</th>
+                <th>Urgencia</th>
+                <th>Estado</th>
+                <th>Presupuesto</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(i => (
+                <tr key={i.id}>
+                  <td>
+                    <div className="table-name">{i.titulo}</div>
+                    <div className="table-sub">{i.descripcion.substring(0, 40)}...</div>
+                  </td>
+                  <td>{i.nombre_propiedad || '—'}</td>
+                  <td><span className="admin-badge admin-badge-neutral">{i.tipo}</span></td>
+                  <td>
+                    {i.urgente ? 
+                      <span className="admin-badge admin-badge-error">🔥 URGENTE</span> 
+                      : <span className="admin-badge admin-badge-neutral">Normal</span>
+                    }
+                  </td>
+                  <td><EstadoIncidenciaBadge estado={i.estado} /></td>
+                  <td>
+                    {i.costo_estimado ? <strong>${i.costo_estimado}</strong> : '—'}
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      {i.token_aprobacion && i.estado === 'PENDIENTE' && (
+                        <button 
+                          className="btn-admin btn-admin-info btn-admin-sm"
+                          onClick={() => copyLink(i.token_aprobacion)}
+                        >
+                          🔗 Link Dueño
+                        </button>
+                      )}
+                      
+                      {i.estado === 'APROBADO' && (
+                         <button 
+                          className="btn-admin btn-admin-success btn-admin-sm"
+                          onClick={() => handleUpdateEstado(i.id, 'COMPLETADO')}
+                         >
+                           ✅ Reparado
+                         </button>
+                      )}
+
+                      {i.estado === 'PENDIENTE' && (
+                         <button 
+                          className="btn-admin btn-admin-primary btn-admin-sm"
+                          onClick={() => handleUpdateEstado(i.id, 'ENVIADO_A_DUENO')}
+                         >
+                           📤 Enviar
+                         </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EstadoIncidenciaBadge({ estado }) {
+  const map = {
+    PENDIENTE: { cls: 'admin-badge-warning', txt: 'Esperando Admin' },
+    ENVIADO_A_DUENO: { cls: 'admin-badge-info', txt: 'Enviado al Dueño' },
+    APROBADO: { cls: 'admin-badge-success', txt: 'Aprobado para Reparar' },
+    RECHAZADO: { cls: 'admin-badge-error', txt: 'Rechazado' },
+    COMPLETADO: { cls: 'admin-badge-purple', txt: 'Reparado / Terminado' },
+    PAGADO: { cls: 'admin-badge-success', txt: 'Pagado' },
+  };
+  const s = map[estado] || map.PENDIENTE;
+  return <span className={`admin-badge ${s.cls}`}>{s.txt}</span>;
+}
+
 function StaffTab({ data, onAction, onRefresh, showToast }) {
   const rolMap = {
     LIMPIEZA: { badge: 'admin-badge-info', label: '🧹 Limpieza' },
@@ -856,6 +1017,16 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
           rol: form.rol || 'LIMPIEZA',
         });
         showToast('Staff creado exitosamente');
+      } else if (config.type === 'incidencia') {
+        await crearIncidencia({
+          propiedad_id: form.propiedad_id,
+          titulo: form.titulo,
+          descripcion: form.descripcion,
+          tipo: form.tipo || 'REPARACION',
+          costo_estimado: parseFloat(form.costo_estimado) || 0,
+          urgente: !!form.urgente,
+        });
+        showToast('Incidencia reportada');
       }
       onRefresh();
       onClose();
@@ -875,6 +1046,7 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
             {config.type === 'reserva' && '📅 Nueva Reserva'}
             {config.type === 'staff' && '👤 Nuevo Staff'}
             {config.type === 'staff-edit' && '✏️ Editar Staff'}
+            {config.type === 'incidencia' && '🛠️ Nueva Incidencia / Reparación'}
           </h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
@@ -1041,6 +1213,52 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
                       <option value="ADMIN">👑 Admin</option>
                     </select>
                   </div>
+                </div>
+              </>
+            )}
+
+            {/* Incidencia Form */}
+            {config.type === 'incidencia' && (
+              <>
+                <div className="input-group">
+                  <label>Propiedad</label>
+                  <select className="select-field" required
+                    value={form.propiedad_id || ''} onChange={e => set('propiedad_id', e.target.value)}>
+                    <option value="">Selecciona una propiedad</option>
+                    {propiedades.map(p => (
+                      <option key={p.id} value={p.id}>{p.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Título del reporte</label>
+                  <input className="input-field" required placeholder="Ej: Fugas aire, Pintura recámara, Pilas..."
+                    value={form.titulo || ''} onChange={e => set('titulo', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Descripción detallada</label>
+                  <textarea className="input-field" style={{height: 80}} required
+                    placeholder="Explica qué se necesita hacer o comprar..."
+                    value={form.descripcion || ''} onChange={e => set('descripcion', e.target.value)} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="input-group">
+                    <label>Tipo</label>
+                    <select className="select-field" value={form.tipo || 'REPARACION'} onChange={e => set('tipo', e.target.value)}>
+                      <option value="REPARACION">🔨 Reparación</option>
+                      <option value="MANTENIMIENTO">🧹 Mantenimiento Profundo</option>
+                      <option value="MISCELANEO">🛒 Compra / Misceláneo</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Costo Estimado ($)</label>
+                    <input className="input-field" type="number" step="0.01" placeholder="0.00"
+                      value={form.costo_estimado || ''} onChange={e => set('costo_estimado', e.target.value)} />
+                  </div>
+                </div>
+                <div className="input-group" style={{flexDirection:'row', alignItems:'center', gap:10}}>
+                  <input type="checkbox" id="urgente" checked={form.urgente || false} onChange={e => set('urgente', e.target.checked)} />
+                  <label htmlFor="urgente" style={{marginBottom:0, cursor:'pointer'}}>🔥 Marcar como URGENTE</label>
                 </div>
               </>
             )}
