@@ -146,6 +146,22 @@ async def subir_foto_incidencia(
     return inc
 
 
+@router.get("/public/pago/{token}", response_model=IncidenciaConDetalles)
+async def obtener_incidencia_publica(token: str, db: AsyncSession = Depends(get_db)):
+    """Obtener info detallada de la incidencia vía token seguro (para el propietario)."""
+    result = await db.execute(select(Incidencia).where(Incidencia.token_aprobacion == token))
+    inc = result.scalar_one_or_none()
+    if not inc:
+        raise HTTPException(status_code=404, detail="El link ha expirado o es inválido")
+    
+    data = IncidenciaResponse.model_validate(inc).model_dump()
+    if inc.propiedad:
+        data["nombre_propiedad"] = inc.propiedad.nombre
+    if inc.reportero:
+        data["reportero_nombre"] = inc.reportero.nombre
+    return IncidenciaConDetalles(**data)
+
+
 @router.get("/public/aprobar/{token}", response_model=dict)
 async def aprobar_desde_link_publico(token: str, db: AsyncSession = Depends(get_db)):
     """Aprobar un presupuesto mediante el link enviado al propietario."""
