@@ -40,7 +40,7 @@ async def listar_tareas(
     if estado:
         query = query.where(TareaLimpieza.estado == estado)
     if asignado_a:
-        query = query.where(TareaLimpieza.asignado_a == asignado_a)
+        query = query.where(TareaLimpieza.asignado_a == str(asignado_a))
     query = query.order_by(TareaLimpieza.fecha_programada, TareaLimpieza.hora_inicio)
     result = await db.execute(query)
     tareas = result.scalars().all()
