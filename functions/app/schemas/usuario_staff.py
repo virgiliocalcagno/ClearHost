@@ -24,6 +24,7 @@ class StaffUpdate(BaseModel):
     documento: Optional[str] = None
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=6)
     rol: Optional[RolStaff] = None
     disponible: Optional[bool] = None
 

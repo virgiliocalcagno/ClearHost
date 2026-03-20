@@ -147,6 +147,11 @@ async def actualizar_staff(
         raise HTTPException(status_code=404, detail="Staff no encontrado")
 
     update_data = data.model_dump(exclude_unset=True)
+    if "password" in update_data:
+        pwd = update_data.pop("password")
+        if pwd:
+            user.password_hash = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
     for field, value in update_data.items():
         setattr(user, field, value)
 

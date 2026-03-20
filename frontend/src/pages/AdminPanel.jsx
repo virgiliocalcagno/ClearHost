@@ -738,12 +738,15 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
         });
         showToast('Reserva creada exitosamente');
       } else if (config.type === 'staff-edit' && isEdit) {
-        await actualizarStaff(config.edit.id, {
+        const updatePayload = {
           nombre: form.nombre,
           documento: form.documento,
           telefono: form.telefono || null,
           rol: form.rol,
-        });
+        };
+        if (form.password) { updatePayload.password = form.password; }
+        
+        await actualizarStaff(config.edit.id, updatePayload);
         showToast('Staff actualizado');
       } else if (config.type === 'staff') {
         await crearStaffMember({
@@ -916,6 +919,11 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
                   <label>Documento de Identidad (Requerido)</label>
                   <input className="input-field" required placeholder="Cédula, Pasaporte..."
                     value={form.documento || ''} onChange={e => set('documento', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Cambiar Contraseña (Opcional)</label>
+                  <input className="input-field" type="password" placeholder="Escribe para cambiarla..."
+                    value={form.password || ''} onChange={e => set('password', e.target.value)} />
                 </div>
                 <div className="input-group">
                   <label>Email (Opcional, no editable)</label>
