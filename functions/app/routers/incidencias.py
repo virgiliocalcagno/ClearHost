@@ -23,7 +23,7 @@ router = APIRouter(prefix="/incidencias", tags=["Mantenimiento e Incidencias"])
 
 @router.get("/", response_model=list[IncidenciaConDetalles])
 async def listar_incidencias(
-    propiedad_id: Optional[UUID] = None,
+    propiedad_id: Optional[str] = None,
     estado: Optional[EstadoIncidencia] = None,
     tipo: Optional[TipoIncidencia] = None,
     db: AsyncSession = Depends(get_db),
@@ -76,7 +76,7 @@ async def crear_incidencia(
 
 
 @router.get("/{incidencia_id}", response_model=IncidenciaConDetalles)
-async def obtener_incidencia(incidencia_id: UUID, db: AsyncSession = Depends(get_db)):
+async def obtener_incidencia(incidencia_id: str, db: AsyncSession = Depends(get_db)):
     inc = await db.get(Incidencia, str(incidencia_id))
     if not inc:
         raise HTTPException(status_code=404, detail="Incidencia no encontrada")
@@ -91,7 +91,7 @@ async def obtener_incidencia(incidencia_id: UUID, db: AsyncSession = Depends(get
 
 @router.put("/{incidencia_id}", response_model=IncidenciaResponse)
 async def actualizar_incidencia(
-    incidencia_id: UUID, 
+    incidencia_id: str, 
     data: IncidenciaUpdate, 
     db: AsyncSession = Depends(get_db)
 ):
@@ -113,7 +113,7 @@ async def actualizar_incidencia(
 
 @router.post("/{incidencia_id}/fotos", response_model=IncidenciaResponse)
 async def subir_foto_incidencia(
-    incidencia_id: UUID,
+    incidencia_id: str,
     foto: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
