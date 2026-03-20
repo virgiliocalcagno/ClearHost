@@ -79,4 +79,39 @@ export const completarTarea = async (tareaId) => {
   return res.data;
 };
 
+// ========== ADMIN: TAREAS ==========
+export const verificarTarea = async (tareaId) => {
+  const res = await api.put(`/tareas/${tareaId}/verificar`);
+  return res.data;
+};
+
+export const asignarTarea = async (tareaId, staffId) => {
+  const res = await api.put(`/tareas/${tareaId}/asignar`, null, {
+    params: staffId ? { staff_id: staffId } : {},
+  });
+  return res.data;
+};
+
+export const autoAsignarTareas = async () => {
+  const res = await api.post('/tareas/auto-asignar');
+  return res.data;
+};
+
+// ========== ICAL SYNC ==========
+export const syncIcalAll = async () => {
+  const res = await api.post('/sync-ical-all');
+  return res.data;
+};
+
+export const syncIcalPropiedad = async (propiedadId) => {
+  const res = await api.post(`/reservas/sync-ical/${propiedadId}`);
+  return res.data;
+};
+
+// ========== STAFF ADMIN ==========
+export const actualizarStaff = async (staffId, data) => {
+  const res = await api.put(`/staff/${staffId}`, data);
+  return res.data;
+};
+
 export default api;

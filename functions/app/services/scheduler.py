@@ -22,10 +22,10 @@ scheduler = AsyncIOScheduler()
 def setup_scheduler():
     """Configura y arranca todos los cron jobs."""
 
-    # 1. Sincronización iCal cada 30 minutos
+    # 1. Sincronización iCal cada 10 minutos
     scheduler.add_job(
         _job_sync_ical,
-        trigger=IntervalTrigger(minutes=settings.ICAL_SYNC_INTERVAL_MINUTES),
+        trigger=IntervalTrigger(minutes=10),
         id="sync_ical",
         name="Sincronización iCal",
         replace_existing=True,

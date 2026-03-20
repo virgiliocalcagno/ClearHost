@@ -163,6 +163,21 @@ function DashboardTab({ stats, data }) {
           <h2>Dashboard</h2>
           <div className="topbar-subtitle" style={{ textTransform: 'capitalize' }}>{today}</div>
         </div>
+        <div className="topbar-actions">
+          <button 
+            className="btn-admin btn-admin-primary" 
+            onClick={async () => {
+              try {
+                await api.post('/sync-ical-all');
+                alert('Sincronización de todas las propiedades iniciada.');
+              } catch (e) {
+                alert('Error al iniciar sincronización global.');
+              }
+            }}
+          >
+            🔄 Sincronizar Todo
+          </button>
+        </div>
       </div>
 
       <div className="stats-grid">

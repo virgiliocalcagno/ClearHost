@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTareasDeHoy, getStoredStaff, logout } from '../services/api';
+import { getStoredStaff, logout } from '../services/api';
+import api from '../services/api';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -16,8 +17,13 @@ export default function Dashboard() {
 
   const loadTareas = async () => {
     try {
-      const data = await getTareasDeHoy(staff.id);
-      setTareas(data);
+      // Traer TODAS las tareas asignadas a este staff (no solo las de hoy)
+      const res = await api.get(`/tareas/`, { params: { asignado_a: staff.id } });
+      // Filtrar solo las pendientes/en_progreso o completadas recientes
+      const activas = res.data.filter(t => 
+        ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADA'].includes(t.estado)
+      );
+      setTareas(activas);
     } catch (err) {
       console.error('Error cargando tareas:', err);
     } finally {
@@ -28,18 +34,19 @@ export default function Dashboard() {
   const handleLogout = () => { logout(); navigate('/'); };
 
   const stats = {
-    pendientes: tareas.filter(t => t.estado === 'pendiente').length,
-    enProgreso: tareas.filter(t => t.estado === 'en_progreso').length,
-    completas: tareas.filter(t => t.estado === 'completada').length,
+    pendientes: tareas.filter(t => t.estado === 'PENDIENTE').length,
+    enProgreso: tareas.filter(t => t.estado === 'EN_PROGRESO').length,
+    completas: tareas.filter(t => t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA').length,
   };
 
   const getStatusBadge = (estado) => {
     const map = {
-      pendiente: { cls: 'badge-pending', txt: 'Pendiente' },
-      en_progreso: { cls: 'badge-progress', txt: 'En Progreso' },
-      completada: { cls: 'badge-done', txt: 'Completada' },
+      PENDIENTE: { cls: 'badge-pending', txt: 'Pendiente' },
+      EN_PROGRESO: { cls: 'badge-progress', txt: 'En Progreso' },
+      COMPLETADA: { cls: 'badge-done', txt: 'Completada' },
+      VERIFICADA: { cls: 'badge-done', txt: 'Verificada' },
     };
-    const s = map[estado] || map.pendiente;
+    const s = map[estado] || map.PENDIENTE;
     return <span className={`badge ${s.cls}`}>{s.txt}</span>;
   };
 
@@ -110,12 +117,12 @@ export default function Dashboard() {
                   <span className="progress-pct">{tarea.progreso || 0}%</span>
                 </div>
 
-                {tarea.estado !== 'completada' && (
+                {tarea.estado !== 'COMPLETADA' && tarea.estado !== 'VERIFICADA' && (
                   <button
                     className="btn btn-primary task-cta"
                     onClick={() => navigate(`/tarea/${tarea.id}`)}
                   >
-                    {tarea.estado === 'en_progreso' ? '▶ Continuar' : '🧹 Empezar Limpieza'}
+                    {tarea.estado === 'EN_PROGRESO' ? '▶ Continuar' : '🧹 Empezar Limpieza'}
                   </button>
                 )}
               </div>

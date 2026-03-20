@@ -30,20 +30,36 @@ async def lifespan(app: FastAPI):
     # STARTUP
     logger.info(f"🚀 Iniciando {settings.APP_NAME}...")
 
-    # Crear tablas (solo en desarrollo)
-    if settings.DEBUG:
-        await init_db()
-        logger.info("✅ Base de datos inicializada")
+    # Crear tablas siempre (crea solo si no existen)
+    await init_db()
+    logger.info("✅ Base de datos inicializada")
 
     # Arrancar cron jobs
     setup_scheduler()
     logger.info("✅ Scheduler configurado")
+
+    # Sincronizar iCal al arrancar para captar nuevas reservas inmediatamente
+    import asyncio
+    asyncio.create_task(_startup_sync())
 
     yield
 
     # SHUTDOWN
     shutdown_scheduler()
     logger.info("👋 Aplicación detenida")
+
+
+async def _startup_sync():
+    """Sincronización iCal inicial al arrancar."""
+    import asyncio
+    await asyncio.sleep(5)  # Esperar a que DB esté lista
+    try:
+        from app.services.ical_sync import sync_all_properties
+        logger.info("🔄 Sincronización iCal inicial...")
+        await sync_all_properties()
+        logger.info("✅ Sincronización iCal inicial completada")
+    except Exception as e:
+        logger.error(f"Error en sync iCal inicial: {e}")
 
 
 # Crear app FastAPI
@@ -74,12 +90,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Servir archivos subidos (fotos de evidencia)
-import os
-upload_dir = os.path.join(os.path.dirname(__file__), "..", "uploads")
-os.makedirs(upload_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
-
 # Registrar routers
 app.include_router(propiedades.router, prefix="/api")
 app.include_router(staff.router, prefix="/api")
@@ -102,3 +112,17 @@ async def health_check():
     return {"status": "healthy"}
 
 
+@app.post("/api/sync-ical-all")
+async def sync_all_ical_now():
+    """Disparar sincronización iCal de TODAS las propiedades ahora."""
+    import asyncio
+    asyncio.create_task(_run_sync_all())
+    return {"message": "Sincronización iCal de todas las propiedades iniciada"}
+
+
+async def _run_sync_all():
+    try:
+        from app.services.ical_sync import sync_all_properties
+        await sync_all_properties()
+    except Exception as e:
+        logger.error(f"Error en sync-all: {e}")
