@@ -411,6 +411,7 @@ function ReservasTab({ data, propiedades, onAction, onRefresh, showToast }) {
 function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
   const [assigning, setAssigning] = useState(null);
   const [autoAssigning, setAutoAssigning] = useState(false);
+  const [evidencia, setEvidencia] = useState(null); // tarea seleccionada para ver evidencia
 
   const getPropName = (t) => {
     const p = propiedades?.find(pr => pr.id === t.propiedad_id);
@@ -429,10 +430,10 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
   const handleVerificar = async (id) => {
     try {
       await verificarTarea(id);
-      showToast('Tarea verificada exitosamente');
+      showToast('Tarea verificada ✓');
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Error al verificar tarea');
+      alert(err.response?.data?.detail || 'Error al verificar');
     }
   };
 
@@ -440,10 +441,10 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
     setAssigning(tareaId);
     try {
       await asignarTarea(tareaId, staffId || null);
-      showToast(staffId ? 'Tarea asignada exitosamente' : 'Asignación removida');
+      showToast('Tarea asignada');
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Error al asignar tarea');
+      alert('Error al asignar tarea');
     } finally {
       setAssigning(null);
     }
@@ -557,6 +558,13 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
                     </td>
                     <td>
                       <div className="table-actions">
+                        <button
+                          className="btn-admin btn-admin-outline btn-admin-sm"
+                          onClick={() => setEvidencia(t)}
+                          title="Ver evidencia"
+                        >
+                          👁 Ver
+                        </button>
                         {t.estado === 'COMPLETADA' && (
                           <button
                             className="btn-admin btn-admin-primary btn-admin-sm"
@@ -574,6 +582,81 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
           </table>
         )}
       </div>
+
+      {/* Modal de evidencia */}
+      {evidencia && (
+        <div className="modal-overlay" onClick={() => setEvidencia(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{maxWidth:700, maxHeight:'90vh', overflow:'auto'}}>
+            <div className="modal-header">
+              <h3>📋 Evidencia: {getPropName(evidencia)}</h3>
+              <button className="modal-close" onClick={() => setEvidencia(null)}>✕</button>
+            </div>
+            <div className="modal-body" style={{padding: 20}}>
+              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20}}>
+                <div><strong>Fecha:</strong> {evidencia.fecha_programada}</div>
+                <div><strong>Estado:</strong> <EstadoBadge estado={evidencia.estado} /></div>
+                <div><strong>Asignado:</strong> {getStaffName(evidencia) || 'Sin asignar'}</div>
+                <div><strong>Huésped:</strong> {evidencia.nombre_huesped || 'N/A'}</div>
+              </div>
+
+              <h4 style={{marginBottom:8}}>✅ Checklist ({(evidencia.checklist || []).filter(i=>i.completado).length}/{(evidencia.checklist || []).length})</h4>
+              {(evidencia.checklist && evidencia.checklist.length > 0) ? (
+                <div style={{display:'flex', flexDirection:'column', gap:6, marginBottom:20}}>
+                  {evidencia.checklist.map((item, i) => (
+                    <div key={i} style={{display:'flex', alignItems:'center', gap:8, padding:'6px 10px', borderRadius:8, background: item.completado ? '#e8f5e9' : '#fff3e0'}}>
+                      <span>{item.completado ? '✅' : '⬜'}</span>
+                      <span style={{flex:1}}>{item.item}</span>
+                      {item.requerido && <span style={{fontSize:11, color:'#e65100', fontWeight:600}}>Obligatorio</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : <p style={{color:'var(--text-tertiary)', marginBottom:20}}>Sin checklist registrado.</p>}
+
+              <h4 style={{marginBottom:8}}>📸 Fotos ANTES</h4>
+              {(evidencia.fotos_antes && evidencia.fotos_antes.length > 0) ? (
+                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px,1fr))', gap:10, marginBottom:20}}>
+                  {evidencia.fotos_antes.map((f, i) => (
+                    <a key={i} href={f.url} target="_blank" rel="noreferrer">
+                      <img src={f.url} alt={`antes-${i}`} style={{width:'100%', borderRadius:10, border:'2px solid #e0e0e0', cursor:'pointer'}} />
+                    </a>
+                  ))}
+                </div>
+              ) : <p style={{color:'var(--text-tertiary)', marginBottom:20}}>Sin fotos de antes.</p>}
+
+              <h4 style={{marginBottom:8}}>📸 Fotos DESPUÉS</h4>
+              {(evidencia.fotos_despues && evidencia.fotos_despues.length > 0) ? (
+                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px,1fr))', gap:10, marginBottom:20}}>
+                  {evidencia.fotos_despues.map((f, i) => (
+                    <a key={i} href={f.url} target="_blank" rel="noreferrer">
+                      <img src={f.url} alt={`despues-${i}`} style={{width:'100%', borderRadius:10, border:'2px solid #a5d6a7', cursor:'pointer'}} />
+                    </a>
+                  ))}
+                </div>
+              ) : <p style={{color:'var(--text-tertiary)', marginBottom:20}}>Sin fotos de después.</p>}
+
+              {evidencia.notas_staff && (
+                <div style={{marginTop:10}}>
+                  <h4>📝 Notas del Staff</h4>
+                  <p style={{background:'#f5f5f5', padding:12, borderRadius:8}}>{evidencia.notas_staff}</p>
+                </div>
+              )}
+
+              {evidencia.estado === 'COMPLETADA' && (
+                <button
+                  className="btn-admin btn-admin-primary"
+                  style={{width:'100%', marginTop:16}}
+                  onClick={async () => {
+                    await handleVerificar(evidencia.id);
+                    setEvidencia(null);
+                  }}
+                >
+                  ✓ Verificar y Aprobar Tarea
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

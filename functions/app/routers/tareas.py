@@ -205,7 +205,7 @@ async def subir_foto(
     foto: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Subir foto de evidencia (antes o después de limpiar)."""
+    """Subir foto de evidencia a Firebase Storage."""
     if tipo not in ("antes", "despues"):
         raise HTTPException(status_code=400, detail="tipo debe ser 'antes' o 'despues'")
 
@@ -216,28 +216,37 @@ async def subir_foto(
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-    # Guardar archivo
+    # Subir a Firebase Storage
+    import firebase_admin
+    from firebase_admin import storage as fb_storage
+
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(options={"storageBucket": "clearhost-c8919.firebasestorage.app"})
+
+    bucket = fb_storage.bucket()
+    
     ext = os.path.splitext(foto.filename)[1] if foto.filename else ".jpg"
-    filename = f"{tarea_id}_{tipo}_{uuid_mod.uuid4().hex[:8]}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-
+    filename = f"evidencias/{tarea_id}/{tipo}_{uuid_mod.uuid4().hex[:8]}{ext}"
+    
     content = await foto.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
+    blob = bucket.blob(filename)
+    blob.upload_from_string(content, content_type=foto.content_type or "image/jpeg")
+    blob.make_public()
+    
+    foto_url = blob.public_url
 
-    # Registrar en la tarea
     foto_info = {
-        "url": f"/uploads/{filename}",
+        "url": foto_url,
         "filename": filename,
         "uploaded_at": datetime.utcnow().isoformat(),
     }
 
     if tipo == "antes":
-        fotos = tarea.fotos_antes or []
+        fotos = list(tarea.fotos_antes or [])
         fotos.append(foto_info)
         tarea.fotos_antes = fotos
     else:
-        fotos = tarea.fotos_despues or []
+        fotos = list(tarea.fotos_despues or [])
         fotos.append(foto_info)
         tarea.fotos_despues = fotos
 
