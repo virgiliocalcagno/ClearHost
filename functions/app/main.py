@@ -115,7 +115,7 @@ async def seed_db_fastapi(db: "AsyncSession" = __import__("fastapi").Depends(__i
     emails = ["admin@clearhost.com", "virgiliocalcagno@gmail.com"]
     creados = []
     
-    for email in emails:
+    for idx, email in enumerate(emails):
         result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.email == email))
         user = result.scalar_one_or_none()
         if not user:
@@ -123,6 +123,7 @@ async def seed_db_fastapi(db: "AsyncSession" = __import__("fastapi").Depends(__i
             hashed = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
             nuevo = UsuarioStaff(
                 nombre="Admin ClearHost" if "admin" in email else "Virgilio",
+                documento=f"V-{idx}00000",
                 email=email,
                 password_hash=hashed,
                 telefono="+52 55 0000 0000",

@@ -5,18 +5,18 @@ import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) { setError('Completa todos los campos'); return; }
+    if (!identificador || !password) { setError('Completa todos los campos'); return; }
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
+      await login(identificador, password);
       const staff = getStoredStaff();
       navigate(staff?.rol === 'ADMIN' ? '/admin' : '/dashboard');
     } catch (err) {
@@ -37,13 +37,13 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
-            <label>📧 Email</label>
+            <label>👤 Email o Documento</label>
             <input
               className="input-field"
-              type="email"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              placeholder="Ej: juan@email.com o V-123456"
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
             />
           </div>
           <div className="input-group">

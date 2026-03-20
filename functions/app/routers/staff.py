@@ -37,8 +37,14 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """Autenticar un miembro del staff."""
+    from sqlalchemy import or_
     result = await db.execute(
-        select(UsuarioStaff).where(UsuarioStaff.email == data.email)
+        select(UsuarioStaff).where(
+            or_(
+                UsuarioStaff.email == data.identificador,
+                UsuarioStaff.documento == data.identificador
+            )
+        )
     )
     user = result.scalar_one_or_none()
     if not user or not bcrypt.checkpw(data.password.encode('utf-8'), user.password_hash.encode('utf-8')):
@@ -102,12 +108,20 @@ async def crear_staff(
     db: AsyncSession = Depends(get_db),
 ):
     """Registrar un nuevo miembro del staff."""
-    # Verificar email único
-    existing = await db.execute(
-        select(UsuarioStaff).where(UsuarioStaff.email == data.email)
+    # Verificar email único si se proporciona
+    if data.email:
+        existing_email = await db.execute(
+            select(UsuarioStaff).where(UsuarioStaff.email == data.email)
+        )
+        if existing_email.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="El email ya está registrado")
+
+    # Verificar documento único
+    existing_doc = await db.execute(
+        select(UsuarioStaff).where(UsuarioStaff.documento == data.documento)
     )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="El email ya está registrado")
+    if existing_doc.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="El documento ya está registrado")
 
     user_data = data.model_dump(exclude={"password"})
     user_data["password_hash"] = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')

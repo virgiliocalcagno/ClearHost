@@ -12,7 +12,8 @@ from app.models.usuario_staff import RolStaff
 
 class StaffCreate(BaseModel):
     nombre: str = Field(..., min_length=1, max_length=200)
-    email: EmailStr
+    documento: str = Field(..., min_length=4, max_length=50)
+    email: Optional[EmailStr] = None
     telefono: Optional[str] = None
     password: str = Field(..., min_length=6)
     rol: RolStaff = RolStaff.LIMPIEZA
@@ -20,6 +21,7 @@ class StaffCreate(BaseModel):
 
 class StaffUpdate(BaseModel):
     nombre: Optional[str] = None
+    documento: Optional[str] = None
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
     rol: Optional[RolStaff] = None
@@ -29,7 +31,8 @@ class StaffUpdate(BaseModel):
 class StaffResponse(BaseModel):
     id: UUID
     nombre: str
-    email: str
+    documento: str
+    email: Optional[str] = None
     telefono: Optional[str] = None
     rol: RolStaff
     disponible: bool
@@ -40,7 +43,7 @@ class StaffResponse(BaseModel):
 
 
 class StaffLogin(BaseModel):
-    email: EmailStr
+    identificador: str
     password: str
 
 

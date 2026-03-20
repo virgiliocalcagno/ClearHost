@@ -25,7 +25,8 @@ class UsuarioStaff(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     nombre: Mapped[str] = mapped_column(String(200), nullable=False)
-    email: Mapped[str] = mapped_column(String(300), unique=True, nullable=False)
+    documento: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, default="000")
+    email: Mapped[str | None] = mapped_column(String(300), unique=True, nullable=True)
     telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(500), nullable=False)
 

@@ -24,8 +24,8 @@ api.interceptors.request.use((config) => {
 });
 
 // ========== AUTH ==========
-export const login = async (email, password) => {
-  const res = await api.post('/staff/login', { email, password });
+export const login = async (identificador, password) => {
+  const res = await api.post('/staff/login', { identificador, password });
   localStorage.setItem('auth_token', res.data.access_token);
   localStorage.setItem('staff_data', JSON.stringify(res.data.staff));
   return res.data;

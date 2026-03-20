@@ -618,7 +618,7 @@ function StaffTab({ data, onAction, onRefresh, showToast }) {
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Email</th>
+                <th>Doc. Identidad</th>
                 <th>Teléfono</th>
                 <th>Rol</th>
                 <th>Estado</th>
@@ -631,7 +631,10 @@ function StaffTab({ data, onAction, onRefresh, showToast }) {
                 return (
                   <tr key={s.id}>
                     <td><div className="table-name">{s.nombre}</div></td>
-                    <td>{s.email}</td>
+                    <td>
+                      <div className="table-name">{s.documento}</div>
+                      {s.email && <div className="table-sub">{s.email}</div>}
+                    </td>
                     <td>{s.telefono || '—'}</td>
                     <td><span className={`admin-badge ${rol.badge}`}>{rol.label}</span></td>
                     <td>
@@ -737,6 +740,7 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
       } else if (config.type === 'staff-edit' && isEdit) {
         await actualizarStaff(config.edit.id, {
           nombre: form.nombre,
+          documento: form.documento,
           telefono: form.telefono || null,
           rol: form.rol,
         });
@@ -744,7 +748,8 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
       } else if (config.type === 'staff') {
         await crearStaffMember({
           nombre: form.nombre,
-          email: form.email,
+          documento: form.documento,
+          email: form.email || null,
           password: form.password,
           telefono: form.telefono || null,
           rol: form.rol || 'LIMPIEZA',
@@ -867,8 +872,13 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
                     value={form.nombre || ''} onChange={e => set('nombre', e.target.value)} />
                 </div>
                 <div className="input-group">
-                  <label>Email</label>
-                  <input className="input-field" type="email" required placeholder="maria@clearhost.com"
+                  <label>Documento de Identidad (Obligatorio)</label>
+                  <input className="input-field" required placeholder="Cédula, Pasaporte, Licencia..."
+                    value={form.documento || ''} onChange={e => set('documento', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Email (Opcional)</label>
+                  <input className="input-field" type="email" placeholder="maria@clearhost.com"
                     value={form.email || ''} onChange={e => set('email', e.target.value)} />
                 </div>
                 <div className="input-group">
@@ -903,7 +913,12 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
                     value={form.nombre || ''} onChange={e => set('nombre', e.target.value)} />
                 </div>
                 <div className="input-group">
-                  <label>Email (no editable)</label>
+                  <label>Documento de Identidad (Requerido)</label>
+                  <input className="input-field" required placeholder="Cédula, Pasaporte..."
+                    value={form.documento || ''} onChange={e => set('documento', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Email (Opcional, no editable)</label>
                   <input className="input-field" disabled value={form.email || ''} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
