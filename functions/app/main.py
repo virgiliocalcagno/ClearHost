@@ -100,3 +100,36 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/api/seed_db")
+@app.get("/seed_db")
+async def seed_db_fastapi(db: "AsyncSession" = __import__("fastapi").Depends(__import__("app.database", fromlist=["get_db"]).get_db)):
+    from sqlalchemy import select
+    from app.models.usuario_staff import UsuarioStaff, RolStaff
+    import bcrypt
+    from app.database import init_db
+    
+    # Crear tablas SQLite primero
+    await init_db()
+
+    emails = ["admin@clearhost.com", "virgiliocalcagno@gmail.com"]
+    creados = []
+    
+    for email in emails:
+        result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.email == email))
+        user = result.scalar_one_or_none()
+        if not user:
+            # Contraseña por defecto: admin123
+            hashed = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            nuevo = UsuarioStaff(
+                nombre="Admin ClearHost" if "admin" in email else "Virgilio",
+                email=email,
+                password_hash=hashed,
+                telefono="+52 55 0000 0000",
+                rol=RolStaff.ADMIN,
+            )
+            db.add(nuevo)
+            creados.append(email)
+            
+    await db.commit()
+    return {"status": "ok", "message": f"Base de datos preparada. Nuevos creados: {creados}", "nota": "Usa la clave: admin123"}
