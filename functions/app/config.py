@@ -10,7 +10,7 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://clearhost:clearhost_pass@localhost:5432/clearhost_db"
+    DATABASE_URL: str = "postgresql+asyncpg://neondb_owner:npg_Q8DNcmCL6ZgJ@ep-odd-salad-amnmroia-pooler.c-5.us-east-1.aws.neon.tech/neondb?ssl=require"
 
     # JWT Auth
     SECRET_KEY: str = "your-secret-key-change-in-production"

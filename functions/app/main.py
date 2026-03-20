@@ -109,9 +109,9 @@ async def seed_db_fastapi(db: "AsyncSession" = __import__("fastapi").Depends(__i
     import bcrypt
     from app.database import init_db, engine, Base
     
-    # Destruir base de datos antigua y recrear si hubo cambios de modelo en SQLite Temporal
+    # IMPORTANTE: En producción con Postgres, NUNCA hacemos drop_all.
+    # Solo creamos las tablas si no existen.
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     emails = ["admin@clearhost.com", "virgiliocalcagno@gmail.com"]
