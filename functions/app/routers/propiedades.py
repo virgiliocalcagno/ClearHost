@@ -37,7 +37,7 @@ async def obtener_propiedad(
 ):
     """Obtener una propiedad por su ID."""
     result = await db.execute(
-        select(Propiedad).where(Propiedad.id == propiedad_id)
+        select(Propiedad).where(Propiedad.id == str(propiedad_id))
     )
     propiedad = result.scalar_one_or_none()
     if not propiedad:
@@ -66,7 +66,7 @@ async def actualizar_propiedad(
 ):
     """Actualizar una propiedad existente."""
     result = await db.execute(
-        select(Propiedad).where(Propiedad.id == propiedad_id)
+        select(Propiedad).where(Propiedad.id == str(propiedad_id))
     )
     propiedad = result.scalar_one_or_none()
     if not propiedad:
@@ -88,7 +88,7 @@ async def eliminar_propiedad(
 ):
     """Eliminar (desactivar) una propiedad."""
     result = await db.execute(
-        select(Propiedad).where(Propiedad.id == propiedad_id)
+        select(Propiedad).where(Propiedad.id == str(propiedad_id))
     )
     propiedad = result.scalar_one_or_none()
     if not propiedad:

@@ -28,7 +28,7 @@ async def listar_reservas(
     """Listar reservas con filtros opcionales."""
     query = select(Reserva)
     if propiedad_id:
-        query = query.where(Reserva.propiedad_id == propiedad_id)
+        query = query.where(Reserva.propiedad_id == str(propiedad_id))
     if estado:
         query = query.where(Reserva.estado == estado)
     if desde:
@@ -66,7 +66,7 @@ async def obtener_reserva(
 ):
     """Obtener una reserva por su ID."""
     result = await db.execute(
-        select(Reserva).where(Reserva.id == reserva_id)
+        select(Reserva).where(Reserva.id == str(reserva_id))
     )
     reserva = result.scalar_one_or_none()
     if not reserva:
@@ -111,7 +111,7 @@ async def actualizar_reserva(
 ):
     """Actualizar una reserva existente."""
     result = await db.execute(
-        select(Reserva).where(Reserva.id == reserva_id)
+        select(Reserva).where(Reserva.id == str(reserva_id))
     )
     reserva = result.scalar_one_or_none()
     if not reserva:
@@ -133,7 +133,7 @@ async def cancelar_reserva(
 ):
     """Cancelar una reserva (cambia estado, no elimina)."""
     result = await db.execute(
-        select(Reserva).where(Reserva.id == reserva_id)
+        select(Reserva).where(Reserva.id == str(reserva_id))
     )
     reserva = result.scalar_one_or_none()
     if not reserva:
@@ -151,7 +151,7 @@ async def sincronizar_ical(
 ):
     """Disparar sincronización iCal manualmente para una propiedad."""
     result = await db.execute(
-        select(Propiedad).where(Propiedad.id == propiedad_id)
+        select(Propiedad).where(Propiedad.id == str(propiedad_id))
     )
     propiedad = result.scalar_one_or_none()
     if not propiedad:

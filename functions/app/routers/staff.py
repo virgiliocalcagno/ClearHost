@@ -96,7 +96,7 @@ async def obtener_staff(
 ):
     """Obtener un miembro del staff por ID."""
     result = await db.execute(
-        select(UsuarioStaff).where(UsuarioStaff.id == staff_id)
+        select(UsuarioStaff).where(UsuarioStaff.id == str(staff_id))
     )
     user = result.scalar_one_or_none()
     if not user:
@@ -142,7 +142,7 @@ async def actualizar_staff(
 ):
     """Actualizar información del staff."""
     result = await db.execute(
-        select(UsuarioStaff).where(UsuarioStaff.id == staff_id)
+        select(UsuarioStaff).where(UsuarioStaff.id == str(staff_id))
     )
     user = result.scalar_one_or_none()
     if not user:
@@ -170,7 +170,7 @@ async def actualizar_fcm_token(
 ):
     """Actualizar token FCM para push notifications."""
     result = await db.execute(
-        select(UsuarioStaff).where(UsuarioStaff.id == staff_id)
+        select(UsuarioStaff).where(UsuarioStaff.id == str(staff_id))
     )
     user = result.scalar_one_or_none()
     if not user:

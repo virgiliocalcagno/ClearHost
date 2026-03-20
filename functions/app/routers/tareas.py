@@ -71,7 +71,7 @@ async def tareas_de_hoy(
     hoy = date.today()
     result = await db.execute(
         select(TareaLimpieza).where(
-            TareaLimpieza.asignado_a == staff_id,
+            TareaLimpieza.asignado_a == str(staff_id),
             TareaLimpieza.fecha_programada == hoy,
         ).order_by(TareaLimpieza.hora_inicio)
     )
@@ -100,7 +100,7 @@ async def obtener_tarea(
 ):
     """Obtener detalle completo de una tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -138,7 +138,7 @@ async def actualizar_tarea(
 ):
     """Actualizar información general de una tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -161,7 +161,7 @@ async def actualizar_checklist(
 ):
     """Actualizar el checklist digital de la tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -186,7 +186,7 @@ async def actualizar_auditoria(
 ):
     """Actualizar la auditoría de activos de la tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -210,7 +210,7 @@ async def subir_foto(
         raise HTTPException(status_code=400, detail="tipo debe ser 'antes' o 'despues'")
 
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -257,7 +257,7 @@ async def completar_tarea(
     Dispara notificación push al admin.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -321,7 +321,7 @@ async def asignar_tarea(
     Si staff_id es None, desasigna la tarea.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -330,7 +330,7 @@ async def asignar_tarea(
     if staff_id:
         # Verificar que el staff existe y está disponible
         staff_result = await db.execute(
-            select(UsuarioStaff).where(UsuarioStaff.id == staff_id)
+            select(UsuarioStaff).where(UsuarioStaff.id == str(staff_id))
         )
         staff = staff_result.scalar_one_or_none()
         if not staff:
@@ -397,7 +397,7 @@ async def verificar_tarea(
 ):
     """Admin verifica y aprueba la tarea completada."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
