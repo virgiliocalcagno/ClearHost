@@ -107,10 +107,12 @@ async def seed_db_fastapi(db: "AsyncSession" = __import__("fastapi").Depends(__i
     from sqlalchemy import select
     from app.models.usuario_staff import UsuarioStaff, RolStaff
     import bcrypt
-    from app.database import init_db
+    from app.database import init_db, engine, Base
     
-    # Crear tablas SQLite primero
-    await init_db()
+    # Destruir base de datos antigua y recrear si hubo cambios de modelo en SQLite Temporal
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
 
     emails = ["admin@clearhost.com", "virgiliocalcagno@gmail.com"]
     creados = []
