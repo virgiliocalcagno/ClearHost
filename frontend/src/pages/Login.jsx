@@ -63,6 +63,9 @@ export default function Login() {
             {loading ? <div className="spinner" style={{width:20,height:20,borderWidth:2}} /> : '🔑 Entrar'}
           </button>
         </form>
+        <button onClick={() => navigate('/olvide-password')} className="login-btn" style={{marginTop: 10, backgroundColor: 'transparent', color: '#4f46e5'}}>
+          ¿Olvidaste tu contraseña?
+        </button>
 
         <p className="login-footer">ClearHost PMS v1.0</p>
       </div>

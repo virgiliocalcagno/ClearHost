@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "ClearHost PMS"
     DEBUG: bool = True
+    
+    # SMTP
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 465
+    FRONTEND_URL: str = "https://clearhost-c8919.web.app"
 
     # iCal Sync
     ICAL_SYNC_INTERVAL_MINUTES: int = 30

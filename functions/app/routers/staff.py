@@ -17,7 +17,9 @@ from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.schemas.usuario_staff import (
     StaffCreate, StaffUpdate, StaffResponse,
     StaffLogin, TokenResponse, FCMTokenUpdate,
+    ForgotPasswordRequest, ResetPasswordRequest
 )
+from jose import JWTError
 
 router = APIRouter(prefix="/staff", tags=["Staff"])
 
@@ -175,5 +177,72 @@ async def actualizar_fcm_token(
         raise HTTPException(status_code=404, detail="Staff no encontrado")
 
     user.fcm_token = data.fcm_token
-    await db.flush()
-    return {"message": "Token FCM actualizado correctamente"}
+    await db.commit()
+    return {"message": "FCM Token actualizado correctamente"}
+
+
+@router.post("/olvide-password")
+async def olvide_password(
+    data: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    import smtplib
+    from email.mime.text import MIMEText
+    
+    result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.email == data.email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # Resolvemos siempre OK por seguridad para evitar enumeración de cuentas
+        return {"message": "Si el correo está registrado, recibirás un enlace."}
+        
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        raise HTTPException(status_code=500, detail="El servidor SMTP no está configurado.")
+
+    expire = datetime.utcnow() + timedelta(minutes=30)
+    to_encode = {"sub": str(user.id), "action": "reset_password", "exp": expire}
+    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    
+    reset_link = f"{settings.FRONTEND_URL}/recuperar-password?token={token}"
+    
+    msg = MIMEText(f"Hola {user.nombre},\n\nHaz clic en el siguiente enlace para restablecer tu contraseña:\n{reset_link}\n\nEste enlace caduca en 30 minutos.")
+    msg['Subject'] = 'Recuperación de Contraseña - ClearHost'
+    msg['From'] = settings.SMTP_USER
+    msg['To'] = user.email
+
+    try:
+        server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error enviando email")
+
+    return {"message": "Si el correo está registrado, recibirás un enlace."}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        payload = jwt.decode(data.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+        action = payload.get("action")
+        if action != "reset_password" or not user_id:
+            raise ValueError("Token inválido")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="El enlace es inválido o ha expirado")
+
+    result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    hashed = bcrypt.hashpw(data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    user.password_hash = hashed
+    await db.commit()
+    
+    return {"message": "Contraseña restablecida exitosamente"}

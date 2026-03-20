@@ -7,6 +7,8 @@ import Checklist from './pages/Checklist';
 import Auditoria from './pages/Auditoria';
 import Fotos from './pages/Fotos';
 import AdminPanel from './pages/AdminPanel';
+import OlvidePassword from './pages/OlvidePassword';
+import RecuperarPassword from './pages/RecuperarPassword';
 
 function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/" />;
@@ -24,6 +26,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/olvide-password" element={<OlvidePassword />} />
+        <Route path="/recuperar-password" element={<RecuperarPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
         <Route path="/tarea/:id" element={<ProtectedRoute><TareaDetalle /></ProtectedRoute>} />
