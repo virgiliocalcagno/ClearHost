@@ -13,7 +13,7 @@ from app.models.reserva import Reserva
 from app.models.propiedad import Propiedad
 from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea, PrioridadTarea
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 logger = logging.getLogger(__name__)
 
@@ -111,21 +111,29 @@ async def crear_tarea_para_reserva(reserva_id: str):
             estado = EstadoTarea.ASIGNADA_NO_CONFIRMADA if staff else EstadoTarea.PENDIENTE
             fecha_asignacion = datetime.utcnow() if staff else None
             
-            # Calcular prioridad de forma simplificada
-            hoy = date.today()
-            if reserva.check_out == hoy:
+            # Calcular prioridad basada en HORAS faltantes para el check-in (llegada del huésped)
+            ahora = datetime.utcnow()
+            # Asumimos que el check-in es a las 15:00 del día fecha_check_in.
+            # Por ahora tomamos la fecha en utc:
+            check_in_datetime = datetime(reserva.check_in.year, reserva.check_in.month, reserva.check_in.day, 15, 0, 0)
+            horas_faltantes = (check_in_datetime - ahora).total_seconds() / 3600.0
+
+            if horas_faltantes <= 12:
+                prioridad = PrioridadTarea.EMERGENCIA
+            elif horas_faltantes <= 24:
                 prioridad = PrioridadTarea.ALTA
-            elif (reserva.check_out - hoy).days == 1:
+            elif horas_faltantes <= 48:
                 prioridad = PrioridadTarea.MEDIA
             else:
                 prioridad = PrioridadTarea.BAJA
 
-            # Crear la tarea de limpieza
+            # Crear la tarea de limpieza para preparar la llegada del huésped
             tarea = TareaLimpieza(
                 reserva_id=reserva.id,
                 propiedad_id=reserva.propiedad_id,
                 asignado_a=staff.id if staff else None,
-                fecha_programada=reserva.check_out,
+                fecha_programada=reserva.check_in,
+                hora_inicio=propiedad.hora_checkout if propiedad.hora_checkout else time(11, 0),
                 estado=estado,
                 prioridad=prioridad,
                 fecha_asignacion=fecha_asignacion,

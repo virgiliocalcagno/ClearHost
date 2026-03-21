@@ -2,10 +2,9 @@
 Schemas Pydantic para Propiedad.
 """
 
-from datetime import datetime
-from uuid import UUID
+from datetime import datetime, time
+from typing import Optional, Any
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class ChecklistItemTemplate(BaseModel):
@@ -27,6 +26,8 @@ class PropiedadCreate(BaseModel):
     checklist_template: Optional[list[ChecklistItemTemplate]] = None
     activos_inventario: Optional[list[ActivoInventario]] = None
     notas: Optional[str] = None
+    hora_checkout: Optional[time] = None
+    hora_checkin: Optional[time] = None
 
 
 class PropiedadUpdate(BaseModel):
@@ -39,10 +40,12 @@ class PropiedadUpdate(BaseModel):
     activos_inventario: Optional[list[ActivoInventario]] = None
     notas: Optional[str] = None
     activa: Optional[bool] = None
+    hora_checkout: Optional[time] = None
+    hora_checkin: Optional[time] = None
 
 
 class PropiedadResponse(BaseModel):
-    id: UUID
+    id: Any
     nombre: str
     direccion: str
     ciudad: str
@@ -53,6 +56,8 @@ class PropiedadResponse(BaseModel):
     activos_inventario: Optional[list] = None
     notas: Optional[str] = None
     activa: bool
+    hora_checkout: Optional[time] = None
+    hora_checkin: Optional[time] = None
     created_at: datetime
     updated_at: datetime
 

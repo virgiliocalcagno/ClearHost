@@ -6,7 +6,7 @@ import os
 import uuid as uuid_mod
 from uuid import UUID
 from typing import Optional
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,6 +57,21 @@ async def listar_tareas(
             tarea_dict["check_out"] = tarea.reserva.check_out
         if tarea.asignado:
             tarea_dict["nombre_asignado"] = tarea.asignado.nombre
+        if tarea.estado not in (EstadoTarea.CLEAN_AND_READY, EstadoTarea.VERIFICADA):
+            ahora = datetime.utcnow()
+            t_hora = tarea.hora_inicio if tarea.hora_inicio else time(11, 0)
+            tarea_dt = datetime.combine(tarea.fecha_programada, t_hora)
+            horas_faltantes = (tarea_dt - ahora).total_seconds() / 3600.0
+
+            if horas_faltantes <= 12:
+                tarea_dict["prioridad"] = PrioridadTarea.EMERGENCIA
+            elif horas_faltantes <= 24:
+                tarea_dict["prioridad"] = PrioridadTarea.ALTA
+            elif horas_faltantes <= 48:
+                tarea_dict["prioridad"] = PrioridadTarea.MEDIA
+            else:
+                tarea_dict["prioridad"] = PrioridadTarea.BAJA
+
         tareas_detalladas.append(TareaConDetalles(**tarea_dict))
 
     return tareas_detalladas
@@ -333,11 +348,13 @@ async def completar_tarea(
 async def asignar_tarea(
     tarea_id: UUID,
     staff_id: Optional[UUID] = None,
+    hora_inicio: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Asignar un miembro del staff a una tarea.
     Si staff_id es None, desasigna la tarea.
+    Adicionalmente permite editar la hora de inicio.
     """
     result = await db.execute(
         select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
@@ -361,6 +378,12 @@ async def asignar_tarea(
         tarea.asignado_a = None
         tarea.estado = EstadoTarea.PENDIENTE
         tarea.fecha_asignacion = None
+
+    if hora_inicio:
+        try:
+            tarea.hora_inicio = datetime.strptime(hora_inicio, "%H:%M").time()
+        except ValueError:
+            pass
 
     await db.flush()
     await db.refresh(tarea)

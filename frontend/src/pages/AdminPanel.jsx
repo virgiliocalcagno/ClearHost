@@ -23,9 +23,10 @@ const actualizarStaff = (id, data) => api.put(`/staff/${id}`, data).then(r => r.
 
 const verificarTarea = (id) => api.put(`/tareas/${id}/verificar`).then(r => r.data);
 const generarLinkWhatsApp = (id) => api.get(`/tareas/${id}/whatsapp-link`).then(r => r.data);
-const asignarTarea = (id, staffId) => {
+const asignarTarea = (id, staffId, horaInicio) => {
   const params = {};
   if (staffId) params.staff_id = staffId;
+  if (horaInicio) params.hora_inicio = horaInicio;
   return api.put(`/tareas/${id}/asignar`, null, { params }).then(r => r.data);
 };
 const autoAsignarTareas = () => api.post('/tareas/auto-asignar').then(r => r.data);
@@ -476,10 +477,10 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
     }
   };
 
-  const handleAsignar = async (tareaId, staffId) => {
+  const handleAsignar = async (tareaId, staffId, horaInicio) => {
     setAssigning(tareaId);
     try {
-      await asignarTarea(tareaId, staffId || null);
+      await asignarTarea(tareaId, staffId || null, horaInicio);
       showToast('Tarea asignada');
       onRefresh();
     } catch (err) {
@@ -487,6 +488,10 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
     } finally {
       setAssigning(null);
     }
+  };
+
+  const handleTimeChange = (tareaId, hora, currentStaffId) => {
+    handleAsignar(tareaId, currentStaffId, hora);
   };
 
   const handleAutoAsignar = async () => {
@@ -568,7 +573,21 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
                     </td>
                     <td>
                       <div className="table-name">{t.fecha_programada}</div>
-                      <div className="table-sub">{t.hora_inicio || 'Sin hora'}</div>
+                      <div className="table-sub">
+                        <input 
+                          type="time" 
+                          value={(t.hora_inicio || '11:00').substring(0, 5)} 
+                          onChange={(e) => handleTimeChange(t.id, e.target.value, t.asignado_a)}
+                          style={{
+                            border: '1px solid var(--border)',
+                            borderRadius: '4px',
+                            padding: '2px 4px',
+                            fontSize: '11px',
+                            marginTop: '4px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      </div>
                     </td>
                     <td>
                       <div className="assign-cell">
@@ -637,6 +656,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
             propiedades={propiedades} 
             getStaffName={getStaffName} 
             handleAsignar={handleAsignar}
+            handleTimeChange={handleTimeChange}
             staffLimpieza={staffLimpieza}
             handleWhatsApp={handleWhatsApp}
           />
@@ -724,7 +744,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
 // ═══════════════════════════════════════════
 // AdminWeeklyCalendar
 // ═══════════════════════════════════════════
-function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar, staffLimpieza, handleWhatsApp }) {
+function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar, handleTimeChange, staffLimpieza, handleWhatsApp }) {
   const tasksByDate = {};
   tareas.forEach(t => {
     if (!tasksByDate[t.fecha_programada]) tasksByDate[t.fecha_programada] = [];
@@ -765,13 +785,13 @@ function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar,
                   <div style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 5}}>Prioridad: {t.prioridad || 'BAJA'}</div>
                   <div style={{fontSize: 12}}>Huésped: {t.nombre_huesped}</div>
                   <div style={{fontSize: 12}}>Check-out: {t.check_out}</div>
-                  <div style={{fontSize: 12, marginTop: 8}}>
+                  <div style={{fontSize: 12, marginTop: 8, display: 'flex', gap: '5px', alignItems: 'center'}}>
                     <select
                       className="select-assign"
                       value={t.asignado_a || ''}
                       onChange={(e) => handleAsignar(t.id, e.target.value)}
                       style={{
-                        padding: '4px', fontSize: '11px', width: '100%',
+                        padding: '4px', fontSize: '11px', flex: 1,
                         color: t.asignado_a ? 'var(--text-primary)' : 'var(--danger)',
                         borderColor: !t.asignado_a ? 'var(--danger)' : undefined,
                       }}
@@ -781,6 +801,15 @@ function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar,
                         <option key={s.id} value={s.id}>{s.nombre}</option>
                       ))}
                     </select>
+                    <input 
+                      type="time" 
+                      value={(t.hora_inicio || '11:00').substring(0, 5)} 
+                      onChange={(e) => handleTimeChange(t.id, e.target.value, t.asignado_a)}
+                      style={{
+                        border: '1px solid var(--border)', borderRadius: '4px',
+                        padding: '2px 4px', fontSize: '11px', cursor: 'pointer'
+                      }}
+                    />
                   </div>
                   <div style={{fontSize: 12, marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <span style={{background: 'var(--bg)', padding: '2px 6px', borderRadius: 4, fontSize: '11px', fontWeight: 600}}>{t.estado.replace(/_/g, ' ')}</span>
@@ -1084,6 +1113,8 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
           ciudad: form.ciudad,
           num_habitaciones: parseInt(form.num_habitaciones) || 1,
           ical_url: form.ical_url || null,
+          hora_checkin: form.hora_checkin || '15:00',
+          hora_checkout: form.hora_checkout || '11:00',
         });
         showToast('Propiedad actualizada');
       } else if (config.type === 'propiedad') {
@@ -1093,6 +1124,8 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
           ciudad: form.ciudad,
           num_habitaciones: parseInt(form.num_habitaciones) || 1,
           ical_url: form.ical_url || null,
+          hora_checkin: form.hora_checkin || '15:00',
+          hora_checkout: form.hora_checkout || '11:00',
         });
         showToast('Propiedad creada exitosamente');
       } else if (config.type === 'reserva') {
@@ -1183,6 +1216,18 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
                   <label>Número de habitaciones</label>
                   <input className="input-field" type="number" min="1" placeholder="1"
                     value={form.num_habitaciones || ''} onChange={e => set('num_habitaciones', e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label>Hora de Check-in</label>
+                    <input className="input-field" type="time"
+                      value={(form.hora_checkin || '15:00').substring(0, 5)} onChange={e => set('hora_checkin', e.target.value)} />
+                  </div>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label>Hora de Check-out</label>
+                    <input className="input-field" type="time"
+                      value={(form.hora_checkout || '11:00').substring(0, 5)} onChange={e => set('hora_checkout', e.target.value)} />
+                  </div>
                 </div>
                 <div className="input-group">
                   <label>URL iCal (Airbnb/Booking)</label>

@@ -4,9 +4,9 @@ Ficha completa con datos de propietario, acceso, operación y plataformas.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
-from sqlalchemy import String, Integer, Float, Boolean, Text, DateTime, JSON
+from sqlalchemy import String, Integer, Float, Boolean, Text, DateTime, JSON, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -53,6 +53,8 @@ class Propiedad(Base):
     num_banos: Mapped[int | None] = mapped_column(Integer, nullable=True, default=1)
     max_huespedes: Mapped[int | None] = mapped_column(Integer, nullable=True, default=2)
     metros_cuadrados: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hora_checkout: Mapped[time | None] = mapped_column(Time, nullable=True)
+    hora_checkin: Mapped[time | None] = mapped_column(Time, nullable=True)
     amenidades: Mapped[dict | None] = mapped_column(
         JSON, nullable=True,
         comment="Lista de amenidades: piscina, AC, parking, etc."
