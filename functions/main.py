@@ -6,7 +6,7 @@ import firebase_admin
 # Inicializar Firebase Admin una sola vez al cargar el módulo
 if not firebase_admin._apps:
     firebase_admin.initialize_app(options={
-        "storageBucket": "clearhost-c8919.firebasestorage.app"
+        "storageBucket": "clearhost-c8919.appspot.com"
     })
 
 # Adaptador para ASGI -> WSGI

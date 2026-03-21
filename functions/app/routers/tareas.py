@@ -282,7 +282,7 @@ async def subir_foto(
     try:
         # Asegurar bucket explícitamente
         try:
-            bucket = fb_storage.bucket("clearhost-c8919.firebasestorage.app")
+            bucket = fb_storage.bucket("clearhost-c8919.appspot.com")
         except:
             bucket = fb_storage.bucket()
         

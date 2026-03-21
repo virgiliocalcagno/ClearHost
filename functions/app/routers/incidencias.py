@@ -171,7 +171,7 @@ async def subir_foto_incidencia(
     
     # Asegurar bucket explícitamente y Token
     try:
-        bucket = fb_storage.bucket("clearhost-c8919.firebasestorage.app")
+        bucket = fb_storage.bucket("clearhost-c8919.appspot.com")
     except:
         bucket = fb_storage.bucket()
         

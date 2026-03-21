@@ -44,7 +44,7 @@ def _init_firebase():
         # usa las credenciales del entorno automáticamente.
         if "FIREBASE_CONFIG" in os.environ or "K_SERVICE" in os.environ:
             firebase_admin.initialize_app(options={
-                "storageBucket": "clearhost-c8919.firebasestorage.app"
+                "storageBucket": "clearhost-c8919.appspot.com"
             })
             _firebase_initialized = True
             logger.info("Firebase Admin SDK inicializado usando credenciales de entorno (Cloud Functions)")
