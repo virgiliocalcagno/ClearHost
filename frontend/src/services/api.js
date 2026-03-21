@@ -64,6 +64,11 @@ export const aceptarTarea = async (tareaId) => {
   return res.data;
 };
 
+export const generarLinkWhatsApp = async (tareaId) => {
+  const res = await api.post(`/tareas/${tareaId}/whatsapp-link`);
+  return res.data;
+};
+
 export const actualizarAuditoria = async (tareaId, auditoria_activos) => {
   const res = await api.put(`/tareas/${tareaId}/auditoria`, { auditoria_activos });
   return res.data;

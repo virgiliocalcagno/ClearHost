@@ -3,15 +3,14 @@ Schemas Pydantic para Reserva.
 """
 
 from datetime import datetime, date
-from uuid import UUID
+from typing import Optional, Any
 from pydantic import BaseModel, Field
-from typing import Optional
 
 from app.models.reserva import FuenteReserva, EstadoReserva
 
 
 class ReservaCreate(BaseModel):
-    propiedad_id: UUID
+    propiedad_id: Any
     fuente: FuenteReserva = FuenteReserva.MANUAL
     nombre_huesped: str = Field(..., min_length=1, max_length=300)
     check_in: date
@@ -31,8 +30,8 @@ class ReservaUpdate(BaseModel):
 
 
 class ReservaResponse(BaseModel):
-    id: UUID
-    propiedad_id: UUID
+    id: Any
+    propiedad_id: Any
     fuente: FuenteReserva
     uid_ical: Optional[str] = None
     nombre_huesped: str

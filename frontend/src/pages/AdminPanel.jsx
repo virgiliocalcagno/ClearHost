@@ -22,6 +22,7 @@ const crearStaffMember = (data) => api.post('/staff/', data).then(r => r.data);
 const actualizarStaff = (id, data) => api.put(`/staff/${id}`, data).then(r => r.data);
 
 const verificarTarea = (id) => api.put(`/tareas/${id}/verificar`).then(r => r.data);
+const generarLinkWhatsApp = (id) => api.get(`/tareas/${id}/whatsapp-link`).then(r => r.data);
 const asignarTarea = (id, staffId) => {
   const params = {};
   if (staffId) params.staff_id = staffId;
@@ -442,6 +443,15 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
   const [evidencia, setEvidencia] = useState(null); // tarea seleccionada para ver evidencia
   const [vista, setVista] = useState('tabla'); // 'tabla' o 'calendario'
 
+  const handleWhatsApp = async (id) => {
+    try {
+      const res = await generarLinkWhatsApp(id);
+      window.open(res.link, '_blank');
+    } catch(err) {
+      alert("No se pudo generar link de WhatsApp");
+    }
+  };
+
   const getPropName = (t) => {
     const p = propiedades?.find(pr => pr.id === t.propiedad_id);
     return p?.nombre || '—';
@@ -606,6 +616,14 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
                             ✓ Verificar
                           </button>
                         )}
+                        <button
+                          className="btn-admin btn-admin-sm"
+                          style={{background:'#25D366', color:'white', border:'none', marginLeft:5}}
+                          onClick={() => handleWhatsApp(t.id)}
+                          title="Enviar a WhatsApp"
+                        >
+                          <i className="fab fa-whatsapp"></i> WhatsApp
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -620,6 +638,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
             getStaffName={getStaffName} 
             handleAsignar={handleAsignar}
             staffLimpieza={staffLimpieza}
+            handleWhatsApp={handleWhatsApp}
           />
         )}
       </div>
@@ -705,7 +724,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
 // ═══════════════════════════════════════════
 // AdminWeeklyCalendar
 // ═══════════════════════════════════════════
-function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar, staffLimpieza }) {
+function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar, staffLimpieza, handleWhatsApp }) {
   const tasksByDate = {};
   tareas.forEach(t => {
     if (!tasksByDate[t.fecha_programada]) tasksByDate[t.fecha_programada] = [];
@@ -763,8 +782,14 @@ function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar,
                       ))}
                     </select>
                   </div>
-                  <div style={{fontSize: 12, marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div style={{fontSize: 12, marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <span style={{background: 'var(--bg)', padding: '2px 6px', borderRadius: 4, fontSize: '11px', fontWeight: 600}}>{t.estado.replace(/_/g, ' ')}</span>
+                    <button
+                      onClick={() => handleWhatsApp(t.id)}
+                      style={{background:'#25D366', color:'white', border:'none', padding:'4px 8px', borderRadius:4, cursor:'pointer', fontSize:11, fontWeight:'bold'}}
+                    >
+                      WhatsApp
+                    </button>
                   </div>
                 </div>
               )
