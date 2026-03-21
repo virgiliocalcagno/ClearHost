@@ -2,6 +2,8 @@
 Router de Incidencias — Gestión de reparaciones, misceláneos y aprobaciones.
 """
 
+import os
+import urllib.parse
 import uuid as uuid_mod
 from uuid import UUID
 from datetime import datetime
@@ -163,23 +165,35 @@ async def subir_foto_incidencia(
     if not inc:
         raise HTTPException(status_code=404, detail="Incidencia no encontrada")
 
+    # Subir a Firebase Storage
     import firebase_admin
     from firebase_admin import storage as fb_storage
-
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(options={"storageBucket": "clearhost-c8919.firebasestorage.app"})
-
-    bucket = fb_storage.bucket()
-    ext = ".jpg"
+    
+    # Asegurar bucket explícitamente y Token
+    try:
+        bucket = fb_storage.bucket("clearhost-c8919.firebasestorage.app")
+    except:
+        bucket = fb_storage.bucket()
+        
+    ext = os.path.splitext(foto.filename)[1] if foto.filename else ".jpg"
     filename = f"incidencias/{incidencia_id}/{uuid_mod.uuid4().hex[:8]}{ext}"
     
-    content = await foto.read()
     blob = bucket.blob(filename)
-    blob.upload_from_string(content, content_type=foto.content_type or "image/jpeg")
-    blob.make_public()
+    
+    # Reposicionar y subir (streaming)
+    await foto.seek(0)
+    blob.upload_from_file(foto.file, content_type=foto.content_type or "image/jpeg")
+    
+    # Metadatos del token
+    download_token = str(uuid_mod.uuid4())
+    blob.metadata = {"firebaseStorageDownloadTokens": download_token}
+    blob.patch()
+    
+    encoded_name = urllib.parse.quote(filename, safe="")
+    foto_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{encoded_name}?alt=media&token={download_token}"
     
     fotos = list(inc.fotos or [])
-    fotos.append({"url": blob.public_url, "uploaded_at": datetime.utcnow().isoformat()})
+    fotos.append({"url": foto_url, "uploaded_at": datetime.utcnow().isoformat()})
     inc.fotos = fotos
 
     await db.commit()
