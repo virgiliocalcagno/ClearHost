@@ -31,6 +31,15 @@ def setup_scheduler():
         replace_existing=True,
     )
 
+    # 1.5. Timeout de Tareas (cada 30 min revisa si hay tareas olvidadas > 2h)
+    scheduler.add_job(
+        _job_check_timeouts,
+        trigger=IntervalTrigger(minutes=30),
+        id="check_timeouts",
+        name="Timeout de Tareas Asignadas",
+        replace_existing=True,
+    )
+
     # 2. Recordatorios al staff - diario a las 8 AM
     scheduler.add_job(
         _job_recordatorios_staff,
@@ -61,6 +70,16 @@ async def _job_sync_ical():
         await sync_all_properties()
     except Exception as e:
         logger.error(f"Error en job sync_ical: {e}")
+
+
+async def _job_check_timeouts():
+    """Job: Verificar timeouts de tareas asignadas no confirmadas."""
+    logger.info("=== Ejecutando Timeout de Tareas ===")
+    try:
+        from app.services.task_automation import check_assignment_timeouts
+        await check_assignment_timeouts()
+    except Exception as e:
+        logger.error(f"Error en job check_timeouts: {e}")
 
 
 async def _job_recordatorios_staff():

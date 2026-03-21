@@ -12,7 +12,8 @@ from app.database import AsyncSessionLocal
 from app.models.reserva import Reserva
 from app.models.propiedad import Propiedad
 from app.models.usuario_staff import UsuarioStaff, RolStaff
-from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea
+from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea, PrioridadTarea
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +108,27 @@ async def crear_tarea_para_reserva(reserva_id: str):
             # Buscar staff disponible (round-robin)
             staff = await obtener_staff_disponible(db, reserva.check_out)
 
+            estado = EstadoTarea.ASIGNADA_NO_CONFIRMADA if staff else EstadoTarea.PENDIENTE
+            fecha_asignacion = datetime.utcnow() if staff else None
+            
+            # Calcular prioridad de forma simplificada
+            hoy = date.today()
+            if reserva.check_out == hoy:
+                prioridad = PrioridadTarea.ALTA
+            elif (reserva.check_out - hoy).days == 1:
+                prioridad = PrioridadTarea.MEDIA
+            else:
+                prioridad = PrioridadTarea.BAJA
+
             # Crear la tarea de limpieza
             tarea = TareaLimpieza(
                 reserva_id=reserva.id,
                 propiedad_id=reserva.propiedad_id,
                 asignado_a=staff.id if staff else None,
                 fecha_programada=reserva.check_out,
-                estado=EstadoTarea.PENDIENTE,
+                estado=estado,
+                prioridad=prioridad,
+                fecha_asignacion=fecha_asignacion,
                 checklist=checklist,
                 auditoria_activos=auditoria,
                 fotos_antes=[],
@@ -141,3 +156,31 @@ async def crear_tarea_para_reserva(reserva_id: str):
             await db.rollback()
             logger.error(f"Error creando tarea para reserva {reserva_id}: {e}")
             raise
+
+
+async def check_assignment_timeouts():
+    """Worker timeout: Quita tareas olvidadas por staff > 2hr y notifica al admin."""
+    logger.info("Verificando timeouts de tareas asignadas no confirmadas...")
+    async with AsyncSessionLocal() as db:
+        timeout_limit = datetime.utcnow() - timedelta(hours=2)
+        
+        result = await db.execute(
+            select(TareaLimpieza).where(
+                TareaLimpieza.estado == EstadoTarea.ASIGNADA_NO_CONFIRMADA,
+                TareaLimpieza.fecha_asignacion <= timeout_limit
+            )
+        )
+        tareas_olvidadas = result.scalars().all()
+
+        for tarea in tareas_olvidadas:
+            old_staff_id = tarea.asignado_a
+            tarea.asignado_a = None
+            tarea.estado = EstadoTarea.PENDIENTE
+            tarea.fecha_asignacion = None
+            tarea.prioridad = PrioridadTarea.EMERGENCIA # Se vuelve emergencia al volver a la bolsa
+            logger.warning(f"TIMEOUT: Tarea {tarea.id} liberada por inactividad de {old_staff_id}.")
+            
+            # TODO: Notificación push de emergencia al administrador aquí
+            
+        if tareas_olvidadas:
+            await db.commit()

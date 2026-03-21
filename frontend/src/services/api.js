@@ -59,6 +59,11 @@ export const actualizarChecklist = async (tareaId, checklist) => {
   return res.data;
 };
 
+export const aceptarTarea = async (tareaId) => {
+  const res = await api.put(`/tareas/${tareaId}/aceptar`);
+  return res.data;
+};
+
 export const actualizarAuditoria = async (tareaId, auditoria_activos) => {
   const res = await api.put(`/tareas/${tareaId}/auditoria`, { auditoria_activos });
   return res.data;

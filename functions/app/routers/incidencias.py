@@ -29,64 +29,105 @@ async def listar_incidencias(
     db: AsyncSession = Depends(get_db),
 ):
     """Listar incidencias con filtros opcionales."""
-    query = select(Incidencia)
-    if propiedad_id:
-        query = query.where(Incidencia.propiedad_id == str(propiedad_id))
-    if estado:
-        query = query.where(Incidencia.estado == estado)
-    if tipo:
-        query = query.where(Incidencia.tipo == tipo)
-    
-    query = query.order_by(Incidencia.fecha_reporte.desc())
-    result = await db.execute(query)
-    incidencias = result.scalars().all()
+    try:
+        # Usamos selectinload para asegurar que las relaciones se carguen en entorno asíncrono
+        query = select(Incidencia).options(
+            selectinload(Incidencia.propiedad),
+            selectinload(Incidencia.reportero)
+        )
+        if propiedad_id:
+            query = query.where(Incidencia.propiedad_id == str(propiedad_id))
+        if estado:
+            query = query.where(Incidencia.estado == estado)
+        if tipo:
+            query = query.where(Incidencia.tipo == tipo)
+        
+        query = query.order_by(Incidencia.fecha_reporte.desc())
+        result = await db.execute(query)
+        incidencias = result.scalars().all()
 
-    detalles = []
-    for inc in incidencias:
-        data = IncidenciaResponse.model_validate(inc).model_dump()
-        if inc.propiedad:
-            data["nombre_propiedad"] = inc.propiedad.nombre
-        if inc.reportero:
-            data["reportero_nombre"] = inc.reportero.nombre
-        detalles.append(IncidenciaConDetalles(**data))
-    
-    return detalles
+        detalles = []
+        for inc in incidencias:
+            inc_data = IncidenciaResponse.model_validate(inc).model_dump()
+            detalles.append(IncidenciaConDetalles(
+                **inc_data,
+                nombre_propiedad=inc.propiedad.nombre if inc.propiedad else "Propiedad desconocida",
+                reportero_nombre=inc.reportero.nombre if inc.reportero else "Staff"
+            ))
+        
+        return detalles
+    except Exception as e:
+        print(f"ERROR LISTAR_INCIDENCIAS: {e}")
+        return []
 
 
 @router.post("/", response_model=IncidenciaResponse, status_code=status.HTTP_201_CREATED)
 async def crear_incidencia(
     data: IncidenciaCreate,
     db: AsyncSession = Depends(get_db),
-    # TODO: Obtener current_user para reportar_por
 ):
     """Crear un reporte de incidencia o necesidad de compra."""
-    # Verificar propiedad
-    prop = await db.get(Propiedad, str(data.propiedad_id))
-    if not prop:
-        raise HTTPException(status_code=404, detail="Propiedad no encontrada")
+    try:
+        # 1. Verificar propiedad con ID en formato string
+        prop_id_str = str(data.propiedad_id)
+        prop = await db.get(Propiedad, prop_id_str)
+        if not prop:
+            raise HTTPException(status_code=404, detail=f"Propiedad {prop_id_str} no encontrada")
 
-    incidencia = Incidencia(
-        **data.model_dump(),
-        token_aprobacion=uuid_mod.uuid4().hex if data.tipo == TipoIncidencia.REPARACION or data.costo_estimado else None
-    )
-    db.add(incidencia)
-    await db.commit()
-    await db.refresh(incidencia)
-    return incidencia
+        # 2. Preparar token
+        token = None
+        if data.tipo == TipoIncidencia.REPARACION or (data.costo_estimado and data.costo_estimado > 0):
+            token = uuid_mod.uuid4().hex
+
+        # 3. Crear objeto manualmente para control total
+        incidencia = Incidencia(
+            id=str(uuid_mod.uuid4()),
+            propiedad_id=prop_id_str,
+            tarea_id=str(data.tarea_id) if data.tarea_id else None,
+            reportado_por=None,  # Se deja vacío o se asignaría desde el auth token en el futuro
+            titulo=data.titulo,
+            descripcion=data.descripcion,
+            tipo=data.tipo,
+            estado=EstadoIncidencia.PENDIENTE,
+            urgente=data.urgente,
+            fotos=[],
+            costo_estimado=float(data.costo_estimado) if data.costo_estimado else 0.0,
+            token_aprobacion=token,
+            fecha_reporte=datetime.utcnow()
+        )
+        
+        db.add(incidencia)
+        await db.commit()
+        
+        # 4. Devolver respuesta limpia usando los datos que ya tenemos
+        # (Usamos db.refresh solo si es necesario, pero commit ya persistió)
+        await db.refresh(incidencia)
+        return incidencia
+
+    except Exception as e:
+        print(f"CRITICAL ERROR IN CREAR_INCIDENCIA: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
 @router.get("/{incidencia_id}", response_model=IncidenciaConDetalles)
 async def obtener_incidencia(incidencia_id: str, db: AsyncSession = Depends(get_db)):
-    inc = await db.get(Incidencia, str(incidencia_id))
+    result = await db.execute(
+        select(Incidencia)
+        .where(Incidencia.id == str(incidencia_id))
+        .options(selectinload(Incidencia.propiedad), selectinload(Incidencia.reportero))
+    )
+    inc = result.scalar_one_or_none()
     if not inc:
         raise HTTPException(status_code=404, detail="Incidencia no encontrada")
     
-    data = IncidenciaResponse.model_validate(inc).model_dump()
-    if inc.propiedad:
-        data["nombre_propiedad"] = inc.propiedad.nombre
-    if inc.reportero:
-        data["reportero_nombre"] = inc.reportero.nombre
-    return IncidenciaConDetalles(**data)
+    inc_data = IncidenciaResponse.model_validate(inc).model_dump()
+    extra = {
+        "nombre_propiedad": inc.propiedad.nombre if inc.propiedad else None,
+        "reportero_nombre": inc.reportero.nombre if inc.reportero else None
+    }
+    return IncidenciaConDetalles(**{**inc_data, **extra})
 
 
 @router.put("/{incidencia_id}", response_model=IncidenciaResponse)
@@ -149,17 +190,21 @@ async def subir_foto_incidencia(
 @router.get("/public/pago/{token}", response_model=IncidenciaConDetalles)
 async def obtener_incidencia_publica(token: str, db: AsyncSession = Depends(get_db)):
     """Obtener info detallada de la incidencia vía token seguro (para el propietario)."""
-    result = await db.execute(select(Incidencia).where(Incidencia.token_aprobacion == token))
+    result = await db.execute(
+        select(Incidencia)
+        .where(Incidencia.token_aprobacion == token)
+        .options(selectinload(Incidencia.propiedad), selectinload(Incidencia.reportero))
+    )
     inc = result.scalar_one_or_none()
     if not inc:
         raise HTTPException(status_code=404, detail="El link ha expirado o es inválido")
     
-    data = IncidenciaResponse.model_validate(inc).model_dump()
-    if inc.propiedad:
-        data["nombre_propiedad"] = inc.propiedad.nombre
-    if inc.reportero:
-        data["reportero_nombre"] = inc.reportero.nombre
-    return IncidenciaConDetalles(**data)
+    inc_data = IncidenciaResponse.model_validate(inc).model_dump()
+    extra = {
+        "nombre_propiedad": inc.propiedad.nombre if inc.propiedad else None,
+        "reportero_nombre": inc.reportero.nombre if inc.reportero else None
+    }
+    return IncidenciaConDetalles(**{**inc_data, **extra})
 
 
 @router.get("/public/aprobar/{token}", response_model=dict)

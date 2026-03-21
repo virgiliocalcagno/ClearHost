@@ -14,10 +14,19 @@ from app.database import Base
 
 
 class EstadoTarea(str, enum.Enum):
-    PENDIENTE = "PENDIENTE"
+    PENDIENTE = "PENDIENTE" # Tarea en la bolsa general (sin staff)
+    ASIGNADA_NO_CONFIRMADA = "ASIGNADA_NO_CONFIRMADA"
+    ACEPTADA = "ACEPTADA"
     EN_PROGRESO = "EN_PROGRESO"
-    COMPLETADA = "COMPLETADA"
-    VERIFICADA = "VERIFICADA"
+    CLEAN_AND_READY = "CLEAN_AND_READY"
+    VERIFICADA = "VERIFICADA" # Para el admin
+
+
+class PrioridadTarea(str, enum.Enum):
+    EMERGENCIA = "EMERGENCIA"
+    ALTA = "ALTA"
+    MEDIA = "MEDIA"
+    BAJA = "BAJA"
 
 
 class TareaLimpieza(Base):
@@ -43,6 +52,12 @@ class TareaLimpieza(Base):
     estado: Mapped[EstadoTarea] = mapped_column(
         SQLEnum(EstadoTarea), default=EstadoTarea.PENDIENTE, nullable=False
     )
+    
+    prioridad: Mapped[PrioridadTarea] = mapped_column(
+        SQLEnum(PrioridadTarea), default=PrioridadTarea.BAJA, nullable=False
+    )
+    
+    fecha_asignacion: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Checklist digital con validaciones booleanas
     checklist: Mapped[dict | None] = mapped_column(JSON, nullable=True)

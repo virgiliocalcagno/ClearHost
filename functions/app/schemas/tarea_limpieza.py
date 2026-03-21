@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from typing import Optional
 
-from app.models.tarea_limpieza import EstadoTarea
+from app.models.tarea_limpieza import EstadoTarea, PrioridadTarea
 
 
 class ChecklistItem(BaseModel):
@@ -40,6 +40,7 @@ class TareaUpdate(BaseModel):
     fecha_programada: Optional[date] = None
     hora_inicio: Optional[time] = None
     estado: Optional[EstadoTarea] = None
+    prioridad: Optional[PrioridadTarea] = None
     notas_staff: Optional[str] = None
 
 
@@ -65,6 +66,8 @@ class TareaResponse(BaseModel):
     fecha_programada: date
     hora_inicio: Optional[time] = None
     estado: EstadoTarea
+    prioridad: PrioridadTarea
+    fecha_asignacion: Optional[datetime] = None
     checklist: Optional[list] = None
     auditoria_activos: Optional[list] = None
     fotos_antes: Optional[list] = None

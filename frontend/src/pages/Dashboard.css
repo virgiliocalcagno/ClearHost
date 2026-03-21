@@ -56,8 +56,29 @@
 /* Task */
 .task-list { display: flex; flex-direction: column; gap: 14px; }
 .task-card { padding: 18px; }
-.task-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.task-prop { font-size: 16px; font-weight: 700; }
+.task-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.task-prop { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.task-priority-badge { font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; letter-spacing: 0.5px; }
+
+/* Semáforo Prioridad */
+.priority-BAJA { border-left: 5px solid var(--success); }
+.priority-MEDIA { border-left: 5px solid var(--warning); }
+.priority-ALTA { border-left: 5px solid var(--danger); }
+.priority-EMERGENCIA { 
+  border: 3px solid var(--danger); 
+  background-color: #fff0f0;
+  animation: pulse-emergency 2s infinite; 
+}
+.badge-EMERGENCIA { background: var(--danger); color: white; display: inline-flex; align-items: center; gap: 4px;}
+.badge-ALTA { background: #ffebee; color: var(--danger); }
+.badge-MEDIA { background: #fff8e1; color: var(--warning); }
+.badge-BAJA { background: #e8f5e9; color: var(--success); }
+
+@keyframes pulse-emergency {
+  0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
 .task-address { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
 .task-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .pill {

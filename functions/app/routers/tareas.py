@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea
+from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea, PrioridadTarea
 from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.schemas.tarea_limpieza import (
     TareaCreate, TareaUpdate, TareaResponse, TareaConDetalles,
@@ -122,8 +122,18 @@ async def crear_tarea(
     data: TareaCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Crear una tarea de limpieza manualmente."""
+    """Crear una tarea de limpieza con prioridad visual (semáforo)."""
     tarea = TareaLimpieza(**data.model_dump())
+    
+    # Calcular semáforo de prioridad (simplificado: si es hoy -> Emergencia, mañana -> Media, +1 -> Baja)
+    hoy = date.today()
+    if tarea.fecha_programada == hoy:
+        tarea.prioridad = PrioridadTarea.EMERGENCIA
+    elif (tarea.fecha_programada - hoy).days == 1:
+        tarea.prioridad = PrioridadTarea.MEDIA
+    else:
+        tarea.prioridad = PrioridadTarea.BAJA
+        
     db.add(tarea)
     await db.flush()
     await db.refresh(tarea)
@@ -169,8 +179,8 @@ async def actualizar_checklist(
 
     tarea.checklist = [item.model_dump() for item in data.checklist]
 
-    # Si la tarea estaba pendiente, pasar a en progreso
-    if tarea.estado == EstadoTarea.PENDIENTE:
+    # Si la tarea no estaba en progreso (y ya está aceptada), pasar a en progreso
+    if tarea.estado in [EstadoTarea.PENDIENTE, EstadoTarea.ASIGNADA_NO_CONFIRMADA, EstadoTarea.ACEPTADA]:
         tarea.estado = EstadoTarea.EN_PROGRESO
 
     await db.flush()
@@ -272,8 +282,8 @@ async def completar_tarea(
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-    if tarea.estado == EstadoTarea.COMPLETADA:
-        raise HTTPException(status_code=400, detail="La tarea ya está completada")
+    if tarea.estado == EstadoTarea.CLEAN_AND_READY:
+        raise HTTPException(status_code=400, detail="La tarea ya está completada (Clean & Ready)")
 
     # Validar que tenga fotos de antes y después
     fotos_antes = tarea.fotos_antes or []
@@ -302,8 +312,8 @@ async def completar_tarea(
                 detail=f"Items requeridos pendientes: {nombres}"
             )
 
-    # Marcar como completada
-    tarea.estado = EstadoTarea.COMPLETADA
+    # Marcar como Clean & Ready
+    tarea.estado = EstadoTarea.CLEAN_AND_READY
     tarea.completada_at = datetime.utcnow()
     await db.flush()
     await db.refresh(tarea)
@@ -345,8 +355,12 @@ async def asignar_tarea(
         if not staff:
             raise HTTPException(status_code=404, detail="Staff no encontrado")
         tarea.asignado_a = str(staff_id)
+        tarea.estado = EstadoTarea.ASIGNADA_NO_CONFIRMADA
+        tarea.fecha_asignacion = datetime.utcnow()
     else:
         tarea.asignado_a = None
+        tarea.estado = EstadoTarea.PENDIENTE
+        tarea.fecha_asignacion = None
 
     await db.flush()
     await db.refresh(tarea)
@@ -388,6 +402,8 @@ async def auto_asignar_tareas(
         staff = await obtener_staff_disponible(db, tarea.fecha_programada)
         if staff:
             tarea.asignado_a = staff.id
+            tarea.estado = EstadoTarea.ASIGNADA_NO_CONFIRMADA
+            tarea.fecha_asignacion = datetime.utcnow()
             asignadas += 1
 
     await db.flush()
@@ -412,14 +428,69 @@ async def verificar_tarea(
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-    if tarea.estado != EstadoTarea.COMPLETADA:
+    if tarea.estado != EstadoTarea.CLEAN_AND_READY:
         raise HTTPException(
             status_code=400,
-            detail="Solo se pueden verificar tareas completadas"
+            detail="Solo se pueden verificar tareas que estén CLEAN_AND_READY"
         )
 
     tarea.estado = EstadoTarea.VERIFICADA
     tarea.verificada_at = datetime.utcnow()
+    await db.flush()
+    await db.refresh(tarea)
+    return tarea
+
+
+@router.post("/{tarea_id}/whatsapp-link")
+async def generar_link_whatsapp(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Endpoint Base (MVP) para integración con WhatsApp API.
+    Genera un link único de la tarea para enviar al staff.
+    """
+    result = await db.execute(
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+    )
+    tarea = result.scalar_one_or_none()
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+        
+    if not tarea.asignado_a:
+        raise HTTPException(status_code=400, detail="La tarea no está asignada a nadie")
+
+    # TODO: Aquí podrías llamar a la API real de Meta/Twilio
+    
+    frontend_url = "https://clearhost-c8919.web.app" # Ajustar a config en prod
+    link_tarea = f"{frontend_url}/app/tarea/{tarea.id}"
+    
+    return {
+        "message": "Link generado exitosamente",
+        "link": link_tarea,
+        "whatsapp_template": f"Hola, tienes una nueva tarea asignada en: {link_tarea}"
+    }
+
+@router.put("/{tarea_id}/aceptar", response_model=TareaResponse)
+async def aceptar_tarea(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Staff marca la tarea asignada como ACEPTADA."""
+    result = await db.execute(
+        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+    )
+    tarea = result.scalar_one_or_none()
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+
+    if tarea.estado != EstadoTarea.ASIGNADA_NO_CONFIRMADA:
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden aceptar tareas en estado ASIGNADA_NO_CONFIRMADA"
+        )
+
+    tarea.estado = EstadoTarea.ACEPTADA
     await db.flush()
     await db.refresh(tarea)
     return tarea

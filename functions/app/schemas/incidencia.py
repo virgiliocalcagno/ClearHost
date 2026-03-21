@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
-from typing import Optional, List
+from typing import Optional, List, Any
 from app.models.incidencia import TipoIncidencia, EstadoIncidencia
 
 class IncidenciaBase(BaseModel):
-    propiedad_id: UUID
-    tarea_id: Optional[UUID] = None
+    propiedad_id: Any
+    tarea_id: Optional[Any] = None
     titulo: str
     descripcion: str
     tipo: TipoIncidencia = TipoIncidencia.REPARACION
     urgente: bool = False
-    costo_estimado: Optional[float] = None
+    costo_estimado: Any = 0.0
 
 class IncidenciaCreate(IncidenciaBase):
     pass
@@ -26,8 +26,8 @@ class IncidenciaUpdate(BaseModel):
     comprobante_url: Optional[str] = None
 
 class IncidenciaResponse(IncidenciaBase):
-    id: UUID
-    reportado_por: Optional[UUID] = None
+    id: Any
+    reportado_por: Optional[Any] = None
     estado: EstadoIncidencia
     fotos: Optional[list] = []
     token_aprobacion: Optional[str] = None

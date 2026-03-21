@@ -440,6 +440,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
   const [assigning, setAssigning] = useState(null);
   const [autoAssigning, setAutoAssigning] = useState(false);
   const [evidencia, setEvidencia] = useState(null); // tarea seleccionada para ver evidencia
+  const [vista, setVista] = useState('tabla'); // 'tabla' o 'calendario'
 
   const getPropName = (t) => {
     const p = propiedades?.find(pr => pr.id === t.propiedad_id);
@@ -501,6 +502,10 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
           <div className="topbar-subtitle">Gestión, asignación y verificación de tareas</div>
         </div>
         <div className="topbar-actions">
+          <div className="view-toggle" style={{display: 'inline-flex', gap: 5, marginRight: 15, background: 'var(--surface)', padding: 4, borderRadius: 8}}>
+            <button className={`btn-admin btn-admin-sm ${vista === 'tabla' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('tabla')} style={{border: 'none'}}>📋 Tabla</button>
+            <button className={`btn-admin btn-admin-sm ${vista === 'calendario' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario')} style={{border: 'none'}}>📅 Semáforo Semanal</button>
+          </div>
           {sinAsignar > 0 && (
             <button
               className="btn-admin btn-admin-primary"
@@ -516,7 +521,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
 
       <div className="admin-table-wrapper">
         <div className="admin-table-header">
-          <h3>Todas las Tareas</h3>
+          <h3>{vista === 'tabla' ? 'Todas las Tareas' : 'Calendario de Urgencias'}</h3>
           <span className="table-count">{data.length} tareas</span>
         </div>
         {data.length === 0 ? (
@@ -525,7 +530,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
             <h4>Sin tareas</h4>
             <p>Las tareas se crean automáticamente al crear reservas.</p>
           </div>
-        ) : (
+        ) : vista === 'tabla' ? (
           <table className="admin-table">
             <thead>
               <tr>
@@ -593,7 +598,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
                         >
                           👁 Ver
                         </button>
-                        {t.estado === 'COMPLETADA' && (
+                        {['COMPLETADA', 'CLEAN_AND_READY'].includes(t.estado) && (
                           <button
                             className="btn-admin btn-admin-primary btn-admin-sm"
                             onClick={() => handleVerificar(t.id)}
@@ -608,6 +613,14 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
               })}
             </tbody>
           </table>
+        ) : (
+          <AdminWeeklyCalendar 
+            tareas={data} 
+            propiedades={propiedades} 
+            getStaffName={getStaffName} 
+            handleAsignar={handleAsignar}
+            staffLimpieza={staffLimpieza}
+          />
         )}
       </div>
 
@@ -669,7 +682,7 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
                 </div>
               )}
 
-              {evidencia.estado === 'COMPLETADA' && (
+              {['COMPLETADA', 'CLEAN_AND_READY'].includes(evidencia.estado) && (
                 <button
                   className="btn-admin btn-admin-primary"
                   style={{width:'100%', marginTop:16}}
@@ -690,8 +703,79 @@ function TareasTab({ data, propiedades, staffList, onRefresh, showToast }) {
 }
 
 // ═══════════════════════════════════════════
-// Staff Tab
+// AdminWeeklyCalendar
 // ═══════════════════════════════════════════
+function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar, staffLimpieza }) {
+  const tasksByDate = {};
+  tareas.forEach(t => {
+    if (!tasksByDate[t.fecha_programada]) tasksByDate[t.fecha_programada] = [];
+    tasksByDate[t.fecha_programada].push(t);
+  });
+
+  const getPriorityColor = (prio) => {
+    switch (prio) {
+      case 'EMERGENCIA': return { border: '3px solid var(--danger)', background: '#fff0f0', animation: 'pulse-emergency 2s infinite' };
+      case 'ALTA': return { borderLeft: '5px solid var(--danger)' };
+      case 'MEDIA': return { borderLeft: '5px solid var(--warning)' };
+      case 'BAJA': return { borderLeft: '5px solid var(--success)' };
+      default: return { borderLeft: '5px solid #ccc' };
+    }
+  };
+
+  const dates = Object.keys(tasksByDate).sort();
+
+  return (
+    <div style={{display: 'flex', gap: '20px', overflowX: 'auto', padding: '10px 20px 20px'}}>
+      {dates.map(dateStr => (
+        <div key={dateStr} style={{minWidth: 280, background: '#f9f9f9', padding: 15, borderRadius: 12, border: '1px solid var(--border)'}}>
+          <h4 style={{marginBottom: 15, borderBottom: '1px solid var(--border)', paddingBottom: 10}}>
+            {new Date(dateStr + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })}
+          </h4>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
+            {tasksByDate[dateStr]
+             .sort((a,b) => (a.prioridad === 'EMERGENCIA' ? -1 : 1))
+             .map(t => {
+              const prop = propiedades.find(p => p.id === t.propiedad_id);
+              const pColor = getPriorityColor(t.prioridad);
+              return (
+                <div key={t.id} style={{
+                  padding: 12, borderRadius: 8, background: 'white',
+                  boxShadow: 'var(--shadow-sm)', ...pColor
+                }}>
+                  <div style={{fontWeight: 800, fontSize: 14}}>{prop?.nombre || 'Propiedad'}</div>
+                  <div style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 5}}>Prioridad: {t.prioridad || 'BAJA'}</div>
+                  <div style={{fontSize: 12}}>Huésped: {t.nombre_huesped}</div>
+                  <div style={{fontSize: 12}}>Check-out: {t.check_out}</div>
+                  <div style={{fontSize: 12, marginTop: 8}}>
+                    <select
+                      className="select-assign"
+                      value={t.asignado_a || ''}
+                      onChange={(e) => handleAsignar(t.id, e.target.value)}
+                      style={{
+                        padding: '4px', fontSize: '11px', width: '100%',
+                        color: t.asignado_a ? 'var(--text-primary)' : 'var(--danger)',
+                        borderColor: !t.asignado_a ? 'var(--danger)' : undefined,
+                      }}
+                    >
+                      <option value="">⚠ Asignar Staff</option>
+                      {staffLimpieza.map(s => (
+                        <option key={s.id} value={s.id}>{s.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{fontSize: 12, marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <span style={{background: 'var(--bg)', padding: '2px 6px', borderRadius: 4, fontSize: '11px', fontWeight: 600}}>{t.estado.replace(/_/g, ' ')}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════
 // Mantenimiento Tab
 // ═══════════════════════════════════════════

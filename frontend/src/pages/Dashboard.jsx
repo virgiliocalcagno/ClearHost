@@ -42,13 +42,29 @@ export default function Dashboard() {
   const getStatusBadge = (estado) => {
     const map = {
       PENDIENTE: { cls: 'badge-pending', txt: 'Pendiente' },
-      EN_PROGRESO: { cls: 'badge-progress', txt: 'En Progreso' },
-      COMPLETADA: { cls: 'badge-done', txt: 'Completada' },
+      ASIGNADA_NO_CONFIRMADA: { cls: 'badge-pending', txt: 'Falta Aceptar' },
+      ACEPTADA: { cls: 'badge-progress', txt: 'Aceptada' },
+      EN_PROGRESO: { cls: 'badge-progress', txt: 'En Limpieza' },
+      CLEAN_AND_READY: { cls: 'badge-done', txt: 'Clean & Ready' },
+      COMPLETADA: { cls: 'badge-done', txt: 'Clean & Ready' },
       VERIFICADA: { cls: 'badge-done', txt: 'Verificada' },
     };
     const s = map[estado] || map.PENDIENTE;
     return <span className={`badge ${s.cls}`}>{s.txt}</span>;
   };
+
+  const getPriorityBadge = (prioridad) => {
+    if (!prioridad) return null;
+    const prioName = prioridad.toUpperCase();
+    return <span className={`task-priority-badge badge-${prioName}`}>{prioName === 'EMERGENCIA' ? '🚨 URGENTE' : prioName}</span>;
+  };
+
+  // Ordenar tareas: Emergencias primero
+  const sortedTareas = [...tareas].sort((a, b) => {
+    if (a.prioridad === 'EMERGENCIA' && b.prioridad !== 'EMERGENCIA') return -1;
+    if (a.prioridad !== 'EMERGENCIA' && b.prioridad === 'EMERGENCIA') return 1;
+    return 0;
+  });
 
   if (loading) return <div className="loading-screen"><div className="spinner" /><span>Cargando tareas...</span></div>;
 
@@ -87,26 +103,34 @@ export default function Dashboard() {
           <span className="badge badge-pending">{tareas.length}</span>
         </div>
 
-        {tareas.length === 0 ? (
+        {sortedTareas.length === 0 ? (
           <div className="empty-state card">
             <span style={{fontSize:48}}>🎉</span>
             <h4>¡Sin tareas hoy!</h4>
-            <p>No tienes limpiezas asignadas.</p>
+            <p>No tienes tareas pendientes o asignadas.</p>
           </div>
         ) : (
           <div className="task-list">
-            {tareas.map((tarea, i) => (
-              <div key={tarea.id} className="task-card card fade-in" style={{animationDelay: `${i*80}ms`}}>
+            {sortedTareas.map((tarea, i) => (
+              <div 
+                key={tarea.id} 
+                className={`task-card card fade-in priority-${tarea.prioridad || 'BAJA'}`} 
+                style={{animationDelay: `${i*80}ms`}}
+              >
                 <div className="task-top">
-                  <h4 className="task-prop">{tarea.nombre_propiedad || 'Propiedad'}</h4>
+                  <div>
+                    <h4 className="task-prop">{tarea.nombre_propiedad || 'Propiedad'}</h4>
+                    {getPriorityBadge(tarea.prioridad)}
+                  </div>
                   {getStatusBadge(tarea.estado)}
                 </div>
                 {tarea.direccion_propiedad && (
                   <p className="task-address">📍 {tarea.direccion_propiedad}</p>
                 )}
                 <div className="task-pills">
-                  <span className="pill">🕐 Check-in: {tarea.check_in || 'N/A'}</span>
-                  <span className="pill">👤 {tarea.nombre_huesped || 'Sin huésped'}</span>
+                  <span className="pill">📅 {tarea.fecha_programada}</span>
+                  <span className="pill">🕐 Checkout: {tarea.check_out || 'N/A'}</span>
+                  <span className="pill">👤 {tarea.nombre_huesped || 'S/Hu.'}</span>
                 </div>
 
                 {/* Progress */}
@@ -117,12 +141,14 @@ export default function Dashboard() {
                   <span className="progress-pct">{tarea.progreso || 0}%</span>
                 </div>
 
-                {tarea.estado !== 'COMPLETADA' && tarea.estado !== 'VERIFICADA' && (
+                {(!['CLEAN_AND_READY', 'COMPLETADA', 'VERIFICADA'].includes(tarea.estado)) && (
                   <button
-                    className="btn btn-primary task-cta"
+                    className={`btn task-cta ${tarea.estado === 'ASIGNADA_NO_CONFIRMADA' ? 'btn-danger' : 'btn-primary'}`}
+                    style={tarea.estado === 'ASIGNADA_NO_CONFIRMADA' ? { background: '#25D366', color: 'white', borderColor: '#25D366' } : {}}
                     onClick={() => navigate(`/tarea/${tarea.id}`)}
                   >
-                    {tarea.estado === 'EN_PROGRESO' ? '▶ Continuar' : '🧹 Empezar Limpieza'}
+                    {tarea.estado === 'ASIGNADA_NO_CONFIRMADA' ? '⏳ VER PARA ACEPTAR' : 
+                     (tarea.estado === 'EN_PROGRESO' ? '▶ Continuar' : '🧹 Empezar Limpieza')}
                   </button>
                 )}
               </div>
