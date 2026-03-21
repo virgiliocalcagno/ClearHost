@@ -1,57 +1,62 @@
-[debug] [2026-03-21T01:15:16.564Z] ----------------------------------------------------------------------
-[debug] [2026-03-21T01:15:16.567Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\virgi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
-[debug] [2026-03-21T01:15:16.567Z] CLI Version:   15.5.1
-[debug] [2026-03-21T01:15:16.567Z] Platform:      win32
-[debug] [2026-03-21T01:15:16.567Z] Node Version:  v24.13.0
-[debug] [2026-03-21T01:15:16.567Z] Time:          Fri Mar 20 2026 21:15:16 GMT-0400 (Atlantic Standard Time)
-[debug] [2026-03-21T01:15:16.567Z] ----------------------------------------------------------------------
+[debug] [2026-03-21T01:30:45.259Z] ----------------------------------------------------------------------
+[debug] [2026-03-21T01:30:45.261Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\virgi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-03-21T01:30:45.262Z] CLI Version:   15.5.1
+[debug] [2026-03-21T01:30:45.262Z] Platform:      win32
+[debug] [2026-03-21T01:30:45.262Z] Node Version:  v24.13.0
+[debug] [2026-03-21T01:30:45.262Z] Time:          Fri Mar 20 2026 21:30:45 GMT-0400 (Atlantic Standard Time)
+[debug] [2026-03-21T01:30:45.262Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2026-03-21T01:15:17.818Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-03-21T01:15:17.818Z] > authorizing via signed-in user (virgiliocalcagno@gmail.com)
-[debug] [2026-03-21T01:15:17.818Z] [iam] checking project clearhost-c8919 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
-[debug] [2026-03-21T01:15:17.819Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:17.819Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:17.820Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions [none]
-[debug] [2026-03-21T01:15:17.820Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions  x-goog-user-project=clearhost-c8919
-[debug] [2026-03-21T01:15:17.820Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
-[debug] [2026-03-21T01:15:18.032Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions 200
-[debug] [2026-03-21T01:15:18.032Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
-[debug] [2026-03-21T01:15:18.033Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.033Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.033Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions [none]
-[debug] [2026-03-21T01:15:18.033Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
-[debug] [2026-03-21T01:15:18.310Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions 200
-[debug] [2026-03-21T01:15:18.310Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-03-21T01:30:46.498Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-21T01:30:46.498Z] > authorizing via signed-in user (virgiliocalcagno@gmail.com)
+[debug] [2026-03-21T01:30:46.498Z] [iam] checking project clearhost-c8919 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-03-21T01:30:46.499Z] Checked if tokens are valid: false, expires at: 1774057109317
+[debug] [2026-03-21T01:30:46.499Z] Checked if tokens are valid: false, expires at: 1774057109317
+[debug] [2026-03-21T01:30:46.499Z] > refreshing access token with scopes: []
+[debug] [2026-03-21T01:30:46.500Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-21T01:30:46.500Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-21T01:30:46.674Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-03-21T01:30:46.674Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-21T01:30:46.684Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions [none]
+[debug] [2026-03-21T01:30:46.684Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions  x-goog-user-project=clearhost-c8919
+[debug] [2026-03-21T01:30:46.685Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-03-21T01:30:46.898Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions 200
+[debug] [2026-03-21T01:30:46.898Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-03-21T01:30:46.899Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:46.899Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:46.899Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-03-21T01:30:46.899Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-03-21T01:30:47.126Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-03-21T01:30:47.126Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/clearhost-c8919/serviceAccounts/clearhost-c8919@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
 [info] 
 [info] === Deploying to 'clearhost-c8919'...
 [info] 
 [info] i  deploying functions 
-[debug] [2026-03-21T01:15:18.312Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.312Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.312Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919 [none]
-[debug] [2026-03-21T01:15:18.421Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919 200
-[debug] [2026-03-21T01:15:18.421Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919 {"projectNumber":"986952569979","projectId":"clearhost-c8919","lifecycleState":"ACTIVE","name":"ClearHost","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-03-20T05:16:29.305Z"}
+[debug] [2026-03-21T01:30:47.128Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:47.128Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:47.128Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919 [none]
+[debug] [2026-03-21T01:30:47.243Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919 200
+[debug] [2026-03-21T01:30:47.243Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919 {"projectNumber":"986952569979","projectId":"clearhost-c8919","lifecycleState":"ACTIVE","name":"ClearHost","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-03-20T05:16:29.305Z"}
 [info] i  functions: preparing codebase default for deployment 
 [info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
 [info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
 [info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
-[debug] [2026-03-21T01:15:18.423Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.423Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.423Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919/adminSdkConfig [none]
-[debug] [2026-03-21T01:15:18.772Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919/adminSdkConfig 200
-[debug] [2026-03-21T01:15:18.772Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919/adminSdkConfig {"projectId":"clearhost-c8919","storageBucket":"clearhost-c8919.firebasestorage.app"}
-[debug] [2026-03-21T01:15:18.772Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.772Z] Checked if tokens are valid: true, expires at: 1774057109317
-[debug] [2026-03-21T01:15:18.772Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clearhost-c8919/configs [none]
-[debug] [2026-03-21T01:15:19.119Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clearhost-c8919/configs 200
-[debug] [2026-03-21T01:15:19.120Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clearhost-c8919/configs {}
-[debug] [2026-03-21T01:15:19.121Z] Customer code is not Node
-[debug] [2026-03-21T01:15:19.121Z] Validating python source
-[debug] [2026-03-21T01:15:19.122Z] Building python source
+[debug] [2026-03-21T01:30:47.244Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:47.244Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:47.245Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919/adminSdkConfig [none]
+[debug] [2026-03-21T01:30:47.610Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919/adminSdkConfig 200
+[debug] [2026-03-21T01:30:47.610Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919/adminSdkConfig {"projectId":"clearhost-c8919","storageBucket":"clearhost-c8919.firebasestorage.app"}
+[debug] [2026-03-21T01:30:47.610Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:47.610Z] Checked if tokens are valid: true, expires at: 1774060245674
+[debug] [2026-03-21T01:30:47.611Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clearhost-c8919/configs [none]
+[debug] [2026-03-21T01:30:47.881Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clearhost-c8919/configs 200
+[debug] [2026-03-21T01:30:47.882Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/clearhost-c8919/configs {}
+[debug] [2026-03-21T01:30:47.882Z] Customer code is not Node
+[debug] [2026-03-21T01:30:47.883Z] Validating python source
+[debug] [2026-03-21T01:30:47.883Z] Building python source
 [info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
-[debug] [2026-03-21T01:15:19.122Z] Could not find functions.yaml. Must use http discovery
-[debug] [2026-03-21T01:15:19.128Z] Running command with virtualenv: command="C:\Users\virgi\ClearHos\functions\venv\Scripts\activate.bat", args=["","&&","python.exe","-c","\"import firebase_functions; import os; print(os.path.dirname(firebase_functions.__file__))\""]
-[debug] [2026-03-21T01:15:19.261Z] stdout: C:\Users\virgi\ClearHos\functions\venv\Lib\site-packages\firebase_functions
+[debug] [2026-03-21T01:30:47.883Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-03-21T01:30:47.890Z] Running command with virtualenv: command="C:\Users\virgi\ClearHos\functions\venv\Scripts\activate.bat", args=["","&&","python.exe","-c","\"import firebase_functions; import os; print(os.path.dirname(firebase_functions.__file__))\""]
+[debug] [2026-03-21T01:30:48.019Z] stdout: C:\Users\virgi\ClearHos\functions\venv\Lib\site-packages\firebase_functions
 
-[debug] [2026-03-21T01:15:19.272Z] Running admin server with args: ["python.exe","\"C:\\Users\\virgi\\ClearHos\\functions\\venv\\Lib\\site-packages\\firebase_functions\\private\\serving.py\""] and env: {"FIREBASE_CONFIG":"{\"projectId\":\"clearhost-c8919\",\"storageBucket\":\"clearhost-c8919.firebasestorage.app\"}","GCLOUD_PROJECT":"clearhost-c8919","GOOGLE_CLOUD_QUOTA_PROJECT":"clearhost-c8919","ADMIN_PORT":"8081"} in C:\Users\virgi\ClearHos\functions
-[debug] [2026-03-21T01:15:19.273Z] Running command with virtualenv: command="C:\Users\virgi\ClearHos\functions\venv\Scripts\activate.bat", args=["","&&","python.exe","\"C:\\Users\\virgi\\ClearHos\\functions\\venv\\Lib\\site-packages\\firebase_functions\\private\\serving.py\""]
+[debug] [2026-03-21T01:30:48.030Z] Running admin server with args: ["python.exe","\"C:\\Users\\virgi\\ClearHos\\functions\\venv\\Lib\\site-packages\\firebase_functions\\private\\serving.py\""] and env: {"FIREBASE_CONFIG":"{\"projectId\":\"clearhost-c8919\",\"storageBucket\":\"clearhost-c8919.firebasestorage.app\"}","GCLOUD_PROJECT":"clearhost-c8919","GOOGLE_CLOUD_QUOTA_PROJECT":"clearhost-c8919","ADMIN_PORT":"8081"} in C:\Users\virgi\ClearHos\functions
+[debug] [2026-03-21T01:30:48.030Z] Running command with virtualenv: command="C:\Users\virgi\ClearHos\functions\venv\Scripts\activate.bat", args=["","&&","python.exe","\"C:\\Users\\virgi\\ClearHos\\functions\\venv\\Lib\\site-packages\\firebase_functions\\private\\serving.py\""]

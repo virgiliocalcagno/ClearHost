@@ -54,7 +54,7 @@ class TareaLimpieza(Base):
     )
     
     prioridad: Mapped[PrioridadTarea] = mapped_column(
-        SQLEnum(PrioridadTarea), default=PrioridadTarea.BAJA, nullable=False
+        String(20), default=PrioridadTarea.BAJA, nullable=False
     )
     
     fecha_asignacion: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
