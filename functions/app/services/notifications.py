@@ -23,28 +23,38 @@ _firebase_initialized = False
 def _init_firebase():
     """Inicializa Firebase Admin SDK si no está inicializado."""
     global _firebase_initialized
+    
+    import firebase_admin
+    from firebase_admin import credentials
+    from app.config import get_settings
+    import os
+
+    # Verificar si ya existe una app inicializada por otro módulo (ej. main.py)
+    if firebase_admin._apps:
+        _firebase_initialized = True
+        return
+
     if _firebase_initialized:
         return
 
     try:
-        import firebase_admin
-        from firebase_admin import credentials
-        from app.config import get_settings
-
         settings = get_settings()
-        import os
         
         # En Cloud Functions de Firebase, inicializar sin argumentos 
         # usa las credenciales del entorno automáticamente.
         if "FIREBASE_CONFIG" in os.environ or "K_SERVICE" in os.environ:
-            firebase_admin.initialize_app()
+            firebase_admin.initialize_app(options={
+                "storageBucket": "clearhost-c8919.firebasestorage.app"
+            })
             _firebase_initialized = True
             logger.info("Firebase Admin SDK inicializado usando credenciales de entorno (Cloud Functions)")
             return
 
         if settings.SERVICE_ACCOUNT_PATH and os.path.exists(settings.SERVICE_ACCOUNT_PATH):
             cred = credentials.Certificate(settings.SERVICE_ACCOUNT_PATH)
-            firebase_admin.initialize_app(cred)
+            firebase_admin.initialize_app(cred, options={
+                "storageBucket": "clearhost-c8919.firebasestorage.app"
+            })
             _firebase_initialized = True
             logger.info(f"Firebase Admin SDK inicializado desde archivo: {settings.SERVICE_ACCOUNT_PATH}")
         else:

@@ -53,8 +53,7 @@ async def websocket_endpoint(websocket: WebSocket, staff_id: str):
     except WebSocketDisconnect:
         ws_manager.disconnect(staff_id)
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Remove local UPLOAD_DIR as we use Firebase
 
 
 @router.get("/", response_model=list[TareaConDetalles])
@@ -275,11 +274,14 @@ async def subir_foto(
     # Subir a Firebase Storage
     import firebase_admin
     from firebase_admin import storage as fb_storage
-
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(options={"storageBucket": "clearhost-c8919.firebasestorage.app"})
-
-    bucket = fb_storage.bucket()
+    
+    # Asegurar bucket explícitamente
+    try:
+        bucket = fb_storage.bucket("clearhost-c8919.firebasestorage.app")
+    except Exception as e:
+        print(f"Error accediendo a bucket: {e}")
+        # Si falla el nombre explícito, intentar el default
+        bucket = fb_storage.bucket()
     
     ext = os.path.splitext(foto.filename)[1] if foto.filename else ".jpg"
     filename = f"evidencias/{tarea_id}/{tipo}_{uuid_mod.uuid4().hex[:8]}{ext}"

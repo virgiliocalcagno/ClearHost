@@ -66,8 +66,8 @@ class TareaLimpieza(Base):
     auditoria_activos: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # URLs de fotos de evidencia
-    fotos_antes: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=list)
-    fotos_despues: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=list)
+    fotos_antes: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    fotos_despues: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
 
     requiere_lavado_ropa: Mapped[bool] = mapped_column(Boolean, default=True)
 
