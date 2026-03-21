@@ -286,10 +286,18 @@ async def subir_foto(
     
     content = await foto.read()
     blob = bucket.blob(filename)
-    blob.upload_from_string(content, content_type=foto.content_type or "image/jpeg")
-    blob.make_public()
     
-    foto_url = blob.public_url
+    # Generar un token de descarga estilo Firebase Client SDK
+    import urllib.parse
+    from uuid import uuid4
+    download_token = str(uuid4())
+    blob.metadata = {"firebaseStorageDownloadTokens": download_token}
+    
+    blob.upload_from_string(content, content_type=foto.content_type or "image/jpeg")
+    # NO llamamos a blob.make_public() porque GCP bloquea ACLs en buckets Uniform.
+    
+    encoded_name = urllib.parse.quote(filename, safe="")
+    foto_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{encoded_name}?alt=media&token={download_token}"
 
     foto_info = {
         "url": foto_url,
