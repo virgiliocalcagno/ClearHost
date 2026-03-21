@@ -84,14 +84,14 @@ async def crear_incidencia(
             id=str(uuid_mod.uuid4()),
             propiedad_id=prop_id_str,
             tarea_id=str(data.tarea_id) if data.tarea_id else None,
-            reportado_por=None,  # Se deja vacío o se asignaría desde el auth token en el futuro
+            reportado_por=None,
             titulo=data.titulo,
             descripcion=data.descripcion,
             tipo=data.tipo,
             estado=EstadoIncidencia.PENDIENTE,
             urgente=data.urgente,
             fotos=[],
-            costo_estimado=float(data.costo_estimado) if data.costo_estimado else 0.0,
+            costo_estimado=float(data.costo_estimado or 0.0),
             token_aprobacion=token,
             fecha_reporte=datetime.utcnow()
         )

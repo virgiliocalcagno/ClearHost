@@ -4,7 +4,7 @@ Contempla latencia de 15-60 minutos en las actualizaciones de los calendarios fu
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, date
 
 import httpx
 from icalendar import Calendar
@@ -130,28 +130,47 @@ async def sync_property_ical(propiedad_id: str):
             events = parse_ical_events(ical_content)
             logger.info(f"Encontrados {len(events)} eventos en iCal de {propiedad.nombre}")
 
+            # Mapa de reservas existentes con uid_ical para esta propiedad
+            existing_res_result = await db.execute(
+                select(Reserva).where(
+                    Reserva.propiedad_id == propiedad_id,
+                    Reserva.uid_ical.isnot(None)
+                )
+            )
+            existing_res_map = {r.uid_ical: r for r in existing_res_result.scalars().all()}
+
+            # Identificar la fuente
+            fuente = detectar_fuente(propiedad.ical_url)
+
+            uids_procesados = set()
             nuevas_reservas = 0
             for event in events:
-                # Verificar si la reserva ya existe por uid_ical
-                existing = await db.execute(
-                    select(Reserva).where(Reserva.uid_ical == event["uid_ical"])
-                )
-                reserva_existente = existing.scalar_one_or_none()
+                uid = event["uid_ical"]
+                uids_procesados.add(uid)
+                reserva_existente = existing_res_map.get(uid)
 
                 if reserva_existente:
-                    # Actualizar fechas si cambiaron
+                    # Reactivar si estaba cancelada localmente pero sigue activa en el iCal (Airbnb/Booking)
+                    if reserva_existente.estado == EstadoReserva.CANCELADA:
+                        reserva_existente.estado = EstadoReserva.CONFIRMADA
+                        logger.info(f"Reserva reactivada (estaba cancelada localmente): {uid}")
+                        # Intentar crear tarea de nuevo por si se borró (la función ya valida si existe)
+                        nuevas_reserva_ids.append(reserva_existente.id)
+
+                    # Actualizar fechas o nombre si cambiaron
                     if (reserva_existente.check_in != event["check_in"] or
-                            reserva_existente.check_out != event["check_out"]):
+                            reserva_existente.check_out != event["check_out"] or
+                            reserva_existente.nombre_huesped != event["nombre_huesped"]):
                         reserva_existente.check_in = event["check_in"]
                         reserva_existente.check_out = event["check_out"]
                         reserva_existente.nombre_huesped = event["nombre_huesped"]
-                        logger.info(f"Reserva actualizada: {event['uid_ical']}")
+                        logger.info(f"Reserva actualizada: {uid}")
                 else:
                     # Crear nueva reserva
                     nueva_reserva = Reserva(
                         propiedad_id=propiedad.id,
                         fuente=fuente,
-                        uid_ical=event["uid_ical"],
+                        uid_ical=uid,
                         nombre_huesped=event["nombre_huesped"],
                         check_in=event["check_in"],
                         check_out=event["check_out"],
@@ -164,12 +183,21 @@ async def sync_property_ical(propiedad_id: str):
                     logger.info(f"Nueva reserva creada: {event['nombre_huesped']} "
                                 f"({event['check_in']} - {event['check_out']})")
 
+            # Detectar reservas que ya no están en el iCal (posibles cancelaciones en Airbnb)
+            hoy = date.today()
+            for uid, res in existing_res_map.items():
+                if uid not in uids_procesados:
+                    # Solo cancelamos si es una reserva futura (las pasadas desaparecen del iCal por ser antiguas)
+                    if res.check_in >= hoy and res.estado == EstadoReserva.CONFIRMADA:
+                        res.estado = EstadoReserva.CANCELADA
+                        logger.info(f"Reserva cancelada en origen (no está en iCal): {uid}")
+
             # Actualizar timestamp de última sincronización
             propiedad.ical_last_sync = datetime.utcnow()
             await db.commit()
             logger.info(
                 f"Sync completada para {propiedad.nombre}: "
-                f"{nuevas_reservas} nuevas reservas"
+                f"{nuevas_reservas} nuevas/reactivadas reservas"
             )
 
         except Exception as e:

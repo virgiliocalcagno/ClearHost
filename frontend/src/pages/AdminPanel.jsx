@@ -17,6 +17,7 @@ const eliminarPropiedad = (id) => api.delete(`/propiedades/${id}`);
 
 const crearReserva = (data) => api.post('/reservas/', data).then(r => r.data);
 const cancelarReserva = (id) => api.delete(`/reservas/${id}`);
+const reactivarReserva = (id) => api.put(`/reservas/${id}`, { estado: 'CONFIRMADA' });
 
 const crearStaffMember = (data) => api.post('/staff/', data).then(r => r.data);
 const actualizarStaff = (id, data) => api.put(`/staff/${id}`, data).then(r => r.data);
@@ -421,6 +422,9 @@ function ReservasTab({ data, propiedades, onAction, onRefresh, showToast }) {
                       <div className="table-actions">
                         {r.estado === 'CONFIRMADA' && (
                           <button className="btn-admin btn-admin-danger btn-admin-sm" onClick={async () => { if (window.confirm('¿Cancelar esta reserva?')) { try { await cancelarReserva(r.id); showToast('Reserva cancelada'); onRefresh(); } catch(e) { alert('Error'); } } }}>✕ Cancelar</button>
+                        )}
+                        {r.estado === 'CANCELADA' && (
+                          <button className="btn-admin btn-admin-success btn-admin-sm" onClick={async () => { if (window.confirm('¿Reactivar esta reserva?')) { try { await reactivarReserva(r.id); showToast('Reserva reactivada'); onRefresh(); } catch(e) { alert('Error'); } } }}>✓ Reactivar</button>
                         )}
                       </div>
                     </td>

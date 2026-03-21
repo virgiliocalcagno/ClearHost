@@ -3,10 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Configuración de Tema y PWA -->
     <meta name="theme-color" content="#F5F5F7" />
-    <meta name="description" content="ClearHost Staff — App de limpieza y gestión de propiedades" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="ClearHost Staff" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- SEO y Redes Sociales -->
+    <meta name="description" content="ClearHost Staff — Plataforma premium de gestión y limpieza para propiedades vacacionales." />
+    <meta property="og:title" content="ClearHost Staff" />
+    <meta property="og:description" content="Optimiza la gestión de tu staff y mantenimiento de propiedades." />
+    <meta property="og:type" content="website" />
+    
     <title>ClearHost Staff</title>
-    <style>body { margin: 0; background: #F5F5F7; }</style>
+    
+    <style>
+      :root {
+        --bg-apple: #F5F5F7;
+      }
+      body { 
+        margin: 0; 
+        background-color: var(--bg-apple); 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

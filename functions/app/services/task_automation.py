@@ -113,9 +113,11 @@ async def crear_tarea_para_reserva(reserva_id: str):
             
             # Calcular prioridad basada en HORAS faltantes para el check-in (llegada del huésped)
             ahora = datetime.utcnow()
-            # Asumimos que el check-in es a las 15:00 del día fecha_check_in.
-            # Por ahora tomamos la fecha en utc:
-            check_in_datetime = datetime(reserva.check_in.year, reserva.check_in.month, reserva.check_in.day, 15, 0, 0)
+            
+            # Usar la hora de check-in de la propiedad o 15:00 por defecto
+            h_in = propiedad.hora_checkin if propiedad and propiedad.hora_checkin else time(15, 0)
+            check_in_datetime = datetime.combine(reserva.check_in, h_in)
+            
             horas_faltantes = (check_in_datetime - ahora).total_seconds() / 3600.0
 
             if horas_faltantes <= 12:

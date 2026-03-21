@@ -107,6 +107,7 @@ async def crear_reserva(
 async def actualizar_reserva(
     reserva_id: str,
     data: ReservaUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Actualizar una reserva existente."""
@@ -118,11 +119,21 @@ async def actualizar_reserva(
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
 
     update_data = data.model_dump(exclude_unset=True)
+    estado_viejo = reserva.estado
+    
     for field, value in update_data.items():
         setattr(reserva, field, value)
 
     await db.flush()
     await db.refresh(reserva)
+
+    # Si se reactiva una reserva (de CANCELADA a CONFIRMADA), 
+    # intentamos crear la tarea de limpieza de nuevo por si se eliminó.
+    from app.models.reserva import EstadoReserva
+    if estado_viejo == EstadoReserva.CANCELADA and reserva.estado == EstadoReserva.CONFIRMADA:
+        from app.services.task_automation import crear_tarea_para_reserva
+        background_tasks.add_task(crear_tarea_para_reserva, reserva.id)
+
     return reserva
 
 
