@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getTareaDetalle, completarTarea } from '../services/api';
+import { getTareaDetalle, completarTarea, aceptarTarea } from '../services/api';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '../theme';
 
 const ESTADO_CONFIG = {
-  PENDIENTE: { color: COLORS.pendiente, label: 'Pendiente', bg: COLORS.warningLight },
+  PENDIENTE: { color: COLORS.pendiente, label: 'En Bolsa', bg: COLORS.warningLight },
+  ASIGNADA_NO_CONFIRMADA: { color: COLORS.pendiente, label: 'Por Confirmar', bg: COLORS.warningLight },
+  ACEPTADA: { color: COLORS.success, label: 'Confirmada', bg: COLORS.successLight },
   EN_PROGRESO: { color: COLORS.enProgreso, label: 'En Progreso', bg: COLORS.secondaryLight },
   COMPLETADA: { color: COLORS.completada, label: 'Clean & Ready ✅', bg: COLORS.successLight },
   VERIFICADA: { color: COLORS.verificada, label: 'Verificada ✅', bg: '#F3F0FF' },
@@ -35,6 +37,20 @@ export default function TareaDetalleScreen({ navigation, route }) {
       setTarea(data);
     } catch (e) {
       console.error('Error recargando tarea:', e);
+    }
+  };
+
+  const handleAceptar = async () => {
+    setLoading(true);
+    try {
+      const data = await aceptarTarea(tarea.id);
+      setTarea(data);
+      Alert.alert('¡Excelente!', 'Tarea aceptada. Ahora puedes comenzar con la limpieza.');
+    } catch (error) {
+      const msg = error.response?.data?.detail || 'Error al aceptar';
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -198,7 +214,27 @@ export default function TareaDetalleScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Fixed CTA bottom button */}
-      {puedeCompletar && (
+      {tarea.estado === 'ASIGNADA_NO_CONFIRMADA' && (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={[styles.ctaButton, { backgroundColor: COLORS.warning }]}
+            onPress={handleAceptar}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color={COLORS.textInverse} />
+            ) : (
+              <>
+                <Ionicons name="checkbox-outline" size={24} color={COLORS.textInverse} />
+                <Text style={styles.ctaText}>Aceptar Tarea (Confirmar)</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {puedeCompletar && (tarea.estado === 'ACEPTADA' || tarea.estado === 'EN_PROGRESO') && (
         <View style={styles.bottomBar}>
           <TouchableOpacity
             style={[styles.ctaButton, completing && styles.ctaDisabled]}

@@ -11,14 +11,27 @@ export default function TareaDetalle() {
   const [completando, setCompletando] = useState(false);
   const [aceptando, setAceptando] = useState(false);
 
-  useEffect(() => { loadTarea(); }, [id]);
+  useEffect(() => { 
+    loadTarea();
+    
+    // Polling cada 15 segundos en el detalle
+    const interval = setInterval(() => {
+      loadTarea(true);
+    }, 15000);
 
-  const loadTarea = async () => {
+    return () => clearInterval(interval);
+  }, [id]);
+
+  const loadTarea = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getTareaDetalle(id);
       setTarea(data);
-    } catch { navigate('/dashboard'); }
-    finally { setLoading(false); }
+    } catch { 
+      if (!silent) navigate('/dashboard'); 
+    } finally { 
+      if (!silent) setLoading(false); 
+    }
   };
 
   const handleAceptar = async () => {

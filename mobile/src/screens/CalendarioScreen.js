@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getTareasDeHoy, logout } from '../services/api';
+import { getTareasDeHoy, logout, API_HOST_WS } from '../services/api';
 import TaskCard from '../components/TaskCard';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '../theme';
 
@@ -33,7 +33,32 @@ export default function CalendarioScreen({ navigation, route }) {
   };
 
   useFocusEffect(
-    useCallback(() => { cargarTareas(); }, [])
+    useCallback(() => {
+      cargarTareas();
+      
+      // Conectar a WebSockets para actualizaciones reales (sin recargas)
+      const wsUrl = `${API_HOST_WS}/api/tareas/ws/${staff.id}`;
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.action === 'RELOAD_TAREAS') {
+            cargarTareas();
+          }
+        } catch (e) {
+          console.error('Error parseando ws message:', e);
+        }
+      };
+
+      ws.onerror = (e) => {
+        console.log('Error en websocket, no es vital, se usa refresh manual como fallback');
+      };
+
+      return () => {
+        ws.close();
+      };
+    }, [staff.id])
   );
 
   const onRefresh = () => {
@@ -51,8 +76,10 @@ export default function CalendarioScreen({ navigation, route }) {
     weekday: 'long', day: 'numeric', month: 'long',
   });
 
-  const pendientes = tareas.filter((t) => t.estado === 'PENDIENTE').length;
-  const enProgreso = tareas.filter((t) => t.estado === 'EN_PROGRESO').length;
+  const pendientes = tareas.filter(
+    (t) => t.estado === 'PENDIENTE' || t.estado === 'ASIGNADA_NO_CONFIRMADA'
+  ).length;
+  const enProgreso = tareas.filter((t) => t.estado === 'ACEPTADA' || t.estado === 'EN_PROGRESO').length;
   const completadas = tareas.filter(
     (t) => t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA'
   ).length;

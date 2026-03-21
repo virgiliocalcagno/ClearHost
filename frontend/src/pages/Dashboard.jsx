@@ -13,15 +13,23 @@ export default function Dashboard() {
   useEffect(() => {
     if (!staff) { navigate('/'); return; }
     loadTareas();
+
+    // Polling cada 30 segundos
+    const interval = setInterval(() => {
+      loadTareas(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadTareas = async () => {
+  const loadTareas = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Traer TODAS las tareas asignadas a este staff (no solo las de hoy)
       const res = await api.get(`/tareas/`, { params: { asignado_a: staff.id } });
       // Filtrar solo las pendientes/en_progreso o completadas recientes
       const activas = res.data.filter(t => 
-        ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADA'].includes(t.estado)
+        ['PENDIENTE', 'ASIGNADA_NO_CONFIRMADA', 'ACEPTADA', 'EN_PROGRESO', 'COMPLETADA'].includes(t.estado)
       );
       setTareas(activas);
     } catch (err) {
@@ -34,9 +42,9 @@ export default function Dashboard() {
   const handleLogout = () => { logout(); navigate('/'); };
 
   const stats = {
-    pendientes: tareas.filter(t => t.estado === 'PENDIENTE').length,
-    enProgreso: tareas.filter(t => t.estado === 'EN_PROGRESO').length,
-    completas: tareas.filter(t => t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA').length,
+    pendientes: tareas.filter(t => t.estado === 'PENDIENTE' || t.estado === 'ASIGNADA_NO_CONFIRMADA').length,
+    enProgreso: tareas.filter(t => t.estado === 'ACEPTADA' || t.estado === 'EN_PROGRESO').length,
+    completas: tareas.filter(t => t.estado === 'CLEAN_AND_READY' || t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA').length,
   };
 
   const getStatusBadge = (estado) => {

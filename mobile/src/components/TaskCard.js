@@ -9,7 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '../theme';
 
 const ESTADO_CONFIG = {
-  PENDIENTE: { color: COLORS.pendiente, icon: 'time-outline', label: 'Pendiente', bg: COLORS.warningLight },
+  PENDIENTE: { color: COLORS.pendiente, icon: 'time-outline', label: 'En Bolsa', bg: COLORS.warningLight },
+  ASIGNADA_NO_CONFIRMADA: { color: COLORS.pendiente, icon: 'alert-circle-outline', label: 'Por Confirmar', bg: COLORS.warningLight },
+  ACEPTADA: { color: COLORS.success, icon: 'checkbox-outline', label: 'Confirmada', bg: COLORS.successLight },
   EN_PROGRESO: { color: COLORS.enProgreso, icon: 'play-circle-outline', label: 'En Progreso', bg: COLORS.secondaryLight },
   COMPLETADA: { color: COLORS.completada, icon: 'checkmark-circle', label: 'Completada', bg: COLORS.successLight },
   VERIFICADA: { color: COLORS.verificada, icon: 'shield-checkmark', label: 'Verificada', bg: '#F3F0FF' },
@@ -84,7 +86,18 @@ export default function TaskCard({ tarea, onPress }) {
       </View>
 
       {/* CTA Button */}
-      {esPendiente && (
+      {tarea.estado === 'ASIGNADA_NO_CONFIRMADA' && (
+        <TouchableOpacity
+          style={[styles.ctaButton, { backgroundColor: COLORS.warning }]}
+          onPress={onPress}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="checkmark-circle" size={16} color={COLORS.textInverse} />
+          <Text style={styles.ctaText}>Confirmar Tarea</Text>
+        </TouchableOpacity>
+      )}
+
+      {(tarea.estado === 'PENDIENTE' || tarea.estado === 'ACEPTADA') && (
         <TouchableOpacity
           style={styles.ctaButton}
           onPress={onPress}

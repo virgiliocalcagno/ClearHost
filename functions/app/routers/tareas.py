@@ -8,7 +8,7 @@ from uuid import UUID
 from typing import Optional
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -21,6 +21,37 @@ from app.schemas.tarea_limpieza import (
 )
 
 router = APIRouter(prefix="/tareas", tags=["Tareas de Limpieza"])
+
+class WSConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[str, WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, staff_id: str):
+        await websocket.accept()
+        self.active_connections[staff_id] = websocket
+
+    def disconnect(self, staff_id: str):
+        if staff_id in self.active_connections:
+            del self.active_connections[staff_id]
+
+    async def send_update_to_staff(self, staff_id: str, message: dict):
+        websocket = self.active_connections.get(staff_id)
+        if websocket:
+            try:
+                await websocket.send_json(message)
+            except Exception:
+                self.disconnect(staff_id)
+
+ws_manager = WSConnectionManager()
+
+@router.websocket("/ws/{staff_id}")
+async def websocket_endpoint(websocket: WebSocket, staff_id: str):
+    await ws_manager.connect(websocket, staff_id)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(staff_id)
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -363,6 +394,8 @@ async def asignar_tarea(
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
+    old_staff_id = tarea.asignado_a
+
     if staff_id:
         # Verificar que el staff existe y está disponible
         staff_result = await db.execute(
@@ -387,6 +420,12 @@ async def asignar_tarea(
 
     await db.flush()
     await db.refresh(tarea)
+
+    # Notificar por WebSocket al staff anterior y nuevo
+    if old_staff_id and old_staff_id != str(staff_id):
+        await ws_manager.send_update_to_staff(old_staff_id, {"action": "RELOAD_TAREAS"})
+    if staff_id:
+        await ws_manager.send_update_to_staff(str(staff_id), {"action": "RELOAD_TAREAS"})
 
     # Devolver con detalles
     tarea_dict = TareaResponse.model_validate(tarea).model_dump()
@@ -428,6 +467,7 @@ async def auto_asignar_tareas(
             tarea.estado = EstadoTarea.ASIGNADA_NO_CONFIRMADA
             tarea.fecha_asignacion = datetime.utcnow()
             asignadas += 1
+            await ws_manager.send_update_to_staff(str(staff.id), {"action": "RELOAD_TAREAS"})
 
     await db.flush()
 
@@ -480,18 +520,38 @@ async def generar_link_whatsapp(
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
         
-    if not tarea.asignado_a:
-        raise HTTPException(status_code=400, detail="La tarea no está asignada a nadie")
-
-    # TODO: Aquí podrías llamar a la API real de Meta/Twilio
+    if not tarea.asignado:
+        raise HTTPException(status_code=400, detail="La tarea no tiene personal asignado")
+        
+    staff = tarea.asignado
+    propiedad = tarea.propiedad
     
-    frontend_url = "https://clearhost-c8919.web.app" # Ajustar a config en prod
+    frontend_url = "https://clearhost-c8919.web.app" # URL de la web
     link_tarea = f"{frontend_url}/app/tarea/{tarea.id}"
     
+    mensaje = (
+        f"Hola {staff.nombre.split()[0]}! 👋\n\n"
+        f"Tienes una nueva tarea de limpieza:\n"
+        f"🏠 *Propiedad:* {propiedad.nombre}\n"
+        f"📅 *Día:* {tarea.fecha_programada}\n"
+        f"🕒 *Check-out:* {tarea.hora_inicio.strftime('%H:%M') if tarea.hora_inicio else '11:00'}\n"
+        f"👤 *Huésped:* {tarea.reserva.nombre_huesped if tarea.reserva else 'N/A'}\n\n"
+        f"Ver detalles y confirmar aquí:\n{link_tarea}"
+    )
+    
+    import urllib.parse
+    mensaje_encoded = urllib.parse.quote(mensaje)
+    
+    # Limpiar teléfono (quitar espacios, +, etc. si es necesario para wa.me)
+    tel = staff.telefono or ""
+    tel_clean = "".join(filter(str.isdigit, tel))
+    
+    whatsapp_url = f"https://wa.me/{tel_clean}?text={mensaje_encoded}"
+    
     return {
-        "message": "Link generado exitosamente",
-        "link": link_tarea,
-        "whatsapp_template": f"Hola, tienes una nueva tarea asignada en: {link_tarea}"
+        "message": "Link de WhatsApp generado",
+        "link": whatsapp_url,
+        "whatsapp_template": mensaje
     }
 
 @router.put("/{tarea_id}/aceptar", response_model=TareaResponse)

@@ -57,10 +57,17 @@ export default function AdminPanel() {
   useEffect(() => {
     if (!isAuthenticated()) { navigate('/'); return; }
     loadAll();
+
+    // Auto-refresh cada 30 segundos
+    const interval = setInterval(() => {
+      loadAll(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadAll = async () => {
-    setLoading(true);
+  const loadAll = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [propiedades, reservas, tareas, staffList, incidencias] = await Promise.all([
         fetchPropiedades(), fetchReservas(), fetchTareas(), fetchStaff(), fetchIncidencias()
@@ -757,8 +764,8 @@ function AdminWeeklyCalendar({ tareas, propiedades, getStaffName, handleAsignar,
 
   const getPriorityColor = (prio) => {
     switch (prio) {
-      case 'EMERGENCIA': return { border: '3px solid var(--danger)', background: '#fff0f0', animation: 'pulse-emergency 2s infinite' };
-      case 'ALTA': return { borderLeft: '5px solid var(--danger)' };
+      case 'EMERGENCIA': return { border: '3px solid var(--error)', background: '#fff0f0', animation: 'pulse-emergency 2s infinite' };
+      case 'ALTA': return { borderLeft: '5px solid var(--error)' };
       case 'MEDIA': return { borderLeft: '5px solid var(--warning)' };
       case 'BAJA': return { borderLeft: '5px solid var(--success)' };
       default: return { borderLeft: '5px solid #ccc' };
@@ -1065,8 +1072,11 @@ function StaffTab({ data, onAction, onRefresh, showToast }) {
 // ═══════════════════════════════════════════
 function EstadoBadge({ estado }) {
   const map = {
-    PENDIENTE: { cls: 'admin-badge-warning', txt: '⏳ Pendiente' },
+    PENDIENTE: { cls: 'admin-badge-warning', txt: '⏳ En Bolsa' },
+    ASIGNADA_NO_CONFIRMADA: { cls: 'admin-badge-warning', txt: '🔔 Por Confirmar' },
+    ACEPTADA: { cls: 'admin-badge-success', txt: '✅ Confirmada' },
     EN_PROGRESO: { cls: 'admin-badge-info', txt: '▶ En Progreso' },
+    CLEAN_AND_READY: { cls: 'admin-badge-success', txt: '✓ Clean & Ready' },
     COMPLETADA: { cls: 'admin-badge-success', txt: '✓ Completada' },
     VERIFICADA: { cls: 'admin-badge-purple', txt: '✦ Verificada' },
   };

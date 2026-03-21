@@ -14,7 +14,10 @@ async def add_enum():
             await conn.execute(
                 text("ALTER TYPE estadotarea ADD VALUE IF NOT EXISTS 'ASIGNADA_NO_CONFIRMADA';")
             )
-            print("Valor añadido correctamente.")
+            await conn.execute(
+                text("ALTER TYPE estadotarea ADD VALUE IF NOT EXISTS 'ACEPTADA';")
+            )
+            print("Valores añadidos correctamente.")
         except Exception as e:
             print(f"Error al añadir: {e}")
 

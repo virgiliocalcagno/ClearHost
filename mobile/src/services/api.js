@@ -15,6 +15,7 @@ const API_HOST = Platform.select({
   default: 'http://localhost:8000',
 });
 const API_BASE = `${API_HOST}/api`;
+export const API_HOST_WS = API_HOST.replace('http://', 'ws://').replace('https://', 'wss://');
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -87,6 +88,11 @@ export const subirFoto = async (tareaId, tipo, photoUri) => {
 
 export const completarTarea = async (tareaId) => {
   const res = await api.put(`/tareas/${tareaId}/completar`);
+  return res.data;
+};
+
+export const aceptarTarea = async (tareaId) => {
+  const res = await api.put(`/tareas/${tareaId}/aceptar`);
   return res.data;
 };
 
