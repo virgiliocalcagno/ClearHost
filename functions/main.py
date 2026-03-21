@@ -12,7 +12,7 @@ if not firebase_admin._apps:
 # Adaptador para ASGI -> WSGI
 wsgi_app = ASGIMiddleware(fastapi_app)
 
-# Exponemos la app con más memoria para manejo de fotos (512MB)
-@https_fn.on_request(memory=512)
+# Exponemos la app con más memoria para manejo de fotos (1024MB)
+@https_fn.on_request(memory=1024)
 def backend(req: https_fn.Request) -> https_fn.Response:
     return https_fn.Response.from_app(wsgi_app, req.environ)

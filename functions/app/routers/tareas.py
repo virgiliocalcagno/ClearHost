@@ -3,6 +3,7 @@ Router de Tareas de Limpieza — CRUD + Checklist + Auditoría + Fotos + Complet
 """
 
 import os
+import urllib.parse
 import uuid as uuid_mod
 from uuid import UUID
 from typing import Optional
@@ -264,6 +265,9 @@ async def subir_foto(
     if tipo not in ("antes", "despues"):
         raise HTTPException(status_code=400, detail="tipo debe ser 'antes' o 'despues'")
 
+    print(f"Subiendo foto {tipo} para tarea {tarea_id}. Archivo: {foto.filename}")
+    
+    # Buscar tarea en la BD
     result = await db.execute(
         select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
     )
@@ -275,50 +279,54 @@ async def subir_foto(
     import firebase_admin
     from firebase_admin import storage as fb_storage
     
-    # Asegurar bucket explícitamente
     try:
-        bucket = fb_storage.bucket("clearhost-c8919.firebasestorage.app")
+        # Asegurar bucket explícitamente
+        try:
+            bucket = fb_storage.bucket("clearhost-c8919.firebasestorage.app")
+        except:
+            bucket = fb_storage.bucket()
+        
+        ext = os.path.splitext(foto.filename)[1] if foto.filename else ".jpg"
+        filename = f"evidencias/{tarea_id}/{tipo}_{uuid_mod.uuid4().hex[:8]}{ext}"
+        
+        blob = bucket.blob(filename)
+        
+        # Reposicionar puntero y subir (streaming)
+        await foto.seek(0)
+        blob.upload_from_file(foto.file, content_type=foto.content_type or "image/jpeg")
+        
+        # Generar un token de descarga estilo Firebase Client SDK
+        download_token = str(uuid_mod.uuid4())
+        blob.metadata = {"firebaseStorageDownloadTokens": download_token}
+        blob.patch() # Persistir metadatos
+        
+        encoded_name = urllib.parse.quote(filename, safe="")
+        foto_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{encoded_name}?alt=media&token={download_token}"
+
+        foto_info = {
+            "url": foto_url,
+            "filename": filename,
+            "uploaded_at": datetime.utcnow().isoformat(),
+        }
+
+        if tipo == "antes":
+            fotos = list(tarea.fotos_antes or [])
+            fotos.append(foto_info)
+            tarea.fotos_antes = fotos
+        else:
+            fotos = list(tarea.fotos_despues or [])
+            fotos.append(foto_info)
+            tarea.fotos_despues = fotos
+
+        await db.commit()
+        await db.refresh(tarea)
+        return tarea
+
     except Exception as e:
-        print(f"Error accediendo a bucket: {e}")
-        # Si falla el nombre explícito, intentar el default
-        bucket = fb_storage.bucket()
-    
-    ext = os.path.splitext(foto.filename)[1] if foto.filename else ".jpg"
-    filename = f"evidencias/{tarea_id}/{tipo}_{uuid_mod.uuid4().hex[:8]}{ext}"
-    
-    content = await foto.read()
-    blob = bucket.blob(filename)
-    
-    # Generar un token de descarga estilo Firebase Client SDK
-    import urllib.parse
-    from uuid import uuid4
-    download_token = str(uuid4())
-    blob.metadata = {"firebaseStorageDownloadTokens": download_token}
-    
-    blob.upload_from_string(content, content_type=foto.content_type or "image/jpeg")
-    # NO llamamos a blob.make_public() porque GCP bloquea ACLs en buckets Uniform.
-    
-    encoded_name = urllib.parse.quote(filename, safe="")
-    foto_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{encoded_name}?alt=media&token={download_token}"
-
-    foto_info = {
-        "url": foto_url,
-        "filename": filename,
-        "uploaded_at": datetime.utcnow().isoformat(),
-    }
-
-    if tipo == "antes":
-        fotos = list(tarea.fotos_antes or [])
-        fotos.append(foto_info)
-        tarea.fotos_antes = fotos
-    else:
-        fotos = list(tarea.fotos_despues or [])
-        fotos.append(foto_info)
-        tarea.fotos_despues = fotos
-
-    await db.flush()
-    await db.refresh(tarea)
-    return tarea
+        print(f"Error en subir_foto: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error al subir foto: {str(e)}")
 
 
 @router.put("/{tarea_id}/completar", response_model=TareaResponse)
