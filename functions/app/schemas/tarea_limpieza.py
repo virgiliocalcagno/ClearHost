@@ -3,12 +3,10 @@ Schemas Pydantic para TareaLimpieza.
 """
 
 from datetime import datetime, date, time
-from uuid import UUID
+from typing import Optional, Any
 from pydantic import BaseModel
-from typing import Optional
 
 from app.models.tarea_limpieza import EstadoTarea, PrioridadTarea
-
 
 class ChecklistItem(BaseModel):
     item: str
@@ -25,9 +23,9 @@ class AuditoriaActivo(BaseModel):
 
 
 class TareaCreate(BaseModel):
-    reserva_id: UUID
-    propiedad_id: UUID
-    asignado_a: Optional[UUID] = None
+    reserva_id: Any
+    propiedad_id: Any
+    asignado_a: Optional[Any] = None
     fecha_programada: date
     hora_inicio: Optional[time] = None
     checklist: Optional[list[ChecklistItem]] = None
@@ -36,7 +34,7 @@ class TareaCreate(BaseModel):
 
 
 class TareaUpdate(BaseModel):
-    asignado_a: Optional[UUID] = None
+    asignado_a: Optional[Any] = None
     fecha_programada: Optional[date] = None
     hora_inicio: Optional[time] = None
     estado: Optional[EstadoTarea] = None
@@ -59,10 +57,10 @@ class FotoUpload(BaseModel):
 
 
 class TareaResponse(BaseModel):
-    id: UUID
-    reserva_id: UUID
-    propiedad_id: UUID
-    asignado_a: Optional[UUID] = None
+    id: Any
+    reserva_id: Any
+    propiedad_id: Any
+    asignado_a: Optional[Any] = None
     fecha_programada: date
     hora_inicio: Optional[time] = None
     estado: EstadoTarea
