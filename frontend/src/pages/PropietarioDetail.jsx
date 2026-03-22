@@ -7,6 +7,8 @@ import './PropietarioDetail.css';
 const fetchDashboard = (id, mes, anio) =>
   api.get(`/propietarios/${id}/dashboard`, { params: { mes, anio } }).then(r => r.data);
 
+const fetchStaff = () => api.get('/staff/').then(r => r.data);
+
 const TABS = [
   { id: 'propiedades', label: 'Propiedades', icon: '🏠' },
   { id: 'reservas', label: 'Reservas', icon: '📅' },
@@ -27,7 +29,12 @@ const ESTADOS_COLOR = {
   ABIERTO: '#ef4444',
   EN_REVISION: '#f59e0b',
   RESUELTO: '#10b981',
+  ASIGNADA_NO_CONFIRMADA: '#f59e0b',
+  ACEPTADA: '#3b82f6',
+  CLEAN_AND_READY: '#10b981',
 };
+
+const PRIORIDADES = ['BAJA', 'MEDIA', 'ALTA', 'EMERGENCIA'];
 
 export default function PropietarioDetail() {
   const { id } = useParams();
@@ -36,6 +43,33 @@ export default function PropietarioDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [staffList, setStaffList] = useState([]);
+
+  // Modales
+  const [showTareaModal, setShowTareaModal] = useState(false);
+  const [showInvModal, setShowInvModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form Tarea
+  const [tareaForm, setTareaForm] = useState({
+    propiedad_id: '',
+    asignado_a: '',
+    fecha_programada: new Date().toISOString().split('T')[0],
+    hora_inicio: '11:00',
+    prioridad: 'MEDIA',
+    notas_staff: '',
+    requiere_lavado_ropa: false,
+  });
+
+  // Form Inventario
+  const [invForm, setInvForm] = useState({
+    articulo: '',
+    categoria: 'General',
+    stock_actual: 0,
+    stock_minimo: 0,
+    propiedad_id: '',
+    costo_unitario: 0,
+  });
 
   // Filtros de mes
   const hoy = new Date();
@@ -47,6 +81,7 @@ export default function PropietarioDetail() {
     const staff = getStoredStaff();
     if (staff?.rol !== 'ADMIN') { navigate('/dashboard'); return; }
     load();
+    loadStaff();
   }, [id, mes, anio]);
 
   const load = async () => {
@@ -60,6 +95,43 @@ export default function PropietarioDetail() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStaff = async () => {
+    try {
+      const list = await fetchStaff();
+      setStaffList(list);
+    } catch (e) {
+      console.error('Error cargando staff', e);
+    }
+  };
+
+  const handleCreateTarea = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/tareas/', tareaForm);
+      setShowTareaModal(false);
+      load(); // Recargar datos
+    } catch (err) {
+      alert('Error al crear tarea');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateInv = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post(`/propietarios/${id}/inventario/`, invForm);
+      setShowInvModal(false);
+      load(); // Recargar datos
+    } catch (err) {
+      alert('Error al registrar insumo');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -79,10 +151,9 @@ export default function PropietarioDetail() {
   );
 
   const { propietario, propiedades, reservas, tareas, incidencias, inventario, resumen } = data;
-
   const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-  // Calcular cargos estimados (de incidencias con costo)
+  // Calcular cargos estimados
   const costoReparaciones = incidencias.reduce((sum, i) => sum + (i.costo_estimado || 0), 0);
   const tareasDelMes = tareas.filter(t => {
     if (!t.completada_at) return false;
@@ -153,7 +224,6 @@ export default function PropietarioDetail() {
           </button>
         ))}
 
-        {/* Selector de mes (visible en todas las tabs) */}
         <div className="month-selector">
           <select value={mes} onChange={e => setMes(Number(e.target.value))}>
             {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
@@ -179,8 +249,8 @@ export default function PropietarioDetail() {
             ) : (
               <div className="props-grid">
                 {propiedades.map(p => {
-                  const reservasActivas = reservas.filter(r => r.propiedad_id === p.id && r.estado === 'CONFIRMADA');
-                  const tareasPropiedad = tareas.filter(t => t.propiedad_id === p.id && ['PENDIENTE', 'EN_PROGRESO'].includes(t.estado));
+                  const reservasActivas = (reservas || []).filter(r => r.propiedad_id === p.id && r.estado === 'CONFIRMADA');
+                  const tareasPropiedad = (tareas || []).filter(t => t.propiedad_id === p.id && ['PENDIENTE', 'EN_PROGRESO'].includes(t.estado));
                   return (
                     <div key={p.id} className={`prop-card ${p.activa ? '' : 'prop-card-inactive'}`}>
                       <div className="prop-card-icon">🏠</div>
@@ -217,9 +287,9 @@ export default function PropietarioDetail() {
           <section className="owner-section">
             <div className="section-title">
               <h2>📅 Reservas</h2>
-              <span className="badge-count">{reservas.length}</span>
+              <span className="badge-count">{(reservas || []).length}</span>
             </div>
-            {reservas.length === 0 ? (
+            {(reservas || []).length === 0 ? (
               <EmptyState icon="📅" msg="Sin reservas registradas" />
             ) : (
               <table className="owner-table">
@@ -257,11 +327,16 @@ export default function PropietarioDetail() {
         {/* ── Tab: Tareas de Limpieza ── */}
         {activeTab === 'tareas' && (
           <section className="owner-section">
-            <div className="section-title">
-              <h2>🧹 Tareas de Limpieza</h2>
-              <span className="badge-count">{tareas.length}</span>
+            <div className="section-header-actions">
+              <div className="section-title">
+                <h2>🧹 Tareas de Limpieza</h2>
+                <span className="badge-count">{(tareas || []).length}</span>
+              </div>
+              <button className="btn-add-manual" onClick={() => setShowTareaModal(true)}>
+                <span>+</span> Nueva Tarea Manual
+              </button>
             </div>
-            {tareas.length === 0 ? (
+            {(tareas || []).length === 0 ? (
               <EmptyState icon="🧹" msg="Sin tareas registradas" />
             ) : (
               <table className="owner-table">
@@ -301,11 +376,13 @@ export default function PropietarioDetail() {
         {/* ── Tab: Reparaciones / Incidencias ── */}
         {activeTab === 'incidencias' && (
           <section className="owner-section">
-            <div className="section-title">
-              <h2>🔧 Reparaciones e Incidencias</h2>
-              <span className="badge-count">{incidencias.length}</span>
+            <div className="section-header-actions">
+              <div className="section-title">
+                <h2>🔧 Reparaciones e Incidencias</h2>
+                <span className="badge-count">{(incidencias || []).length}</span>
+              </div>
             </div>
-            {incidencias.length === 0 ? (
+            {(incidencias || []).length === 0 ? (
               <EmptyState icon="🔧" msg="Sin reparaciones registradas" />
             ) : (
               <table className="owner-table">
@@ -345,43 +422,52 @@ export default function PropietarioDetail() {
         {/* ── Tab: Inventario ── */}
         {activeTab === 'inventario' && (
           <section className="owner-section">
-            <div className="section-title">
-              <h2>📦 Inventario de Activos</h2>
-              <span className="badge-count">{inventario.length}</span>
-            </div>
-            {inventario.length === 0 ? (
-              <EmptyState icon="📦" msg="Sin activos registrados en las propiedades" />
-            ) : (
-              <div className="inventory-grid">
-                {propiedades.map(p => {
-                  const activosProp = inventario.filter(a => a.propiedad_id === p.id);
-                  if (activosProp.length === 0) return null;
-                  return (
-                    <div key={p.id} className="inventory-card">
-                      <div className="inventory-card-title">
-                        <span>🏠</span>
-                        <h3>{p.nombre}</h3>
-                      </div>
-                      <table className="owner-table owner-table-sm">
-                        <thead>
-                          <tr>
-                            <th>Activo</th>
-                            <th>Cantidad</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activosProp.map((a, idx) => (
-                            <tr key={idx}>
-                              <td>{a.activo}</td>
-                              <td><span className="qty-badge">{a.cantidad}</span></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })}
+            <div className="section-header-actions">
+              <div className="section-title">
+                <h2>📦 Control de Stock e Insumos</h2>
+                <span className="badge-count">{(inventario || []).length}</span>
               </div>
+              <button className="btn-add-manual" onClick={() => setShowInvModal(true)}>
+                <span>+</span> Registrar Insumo
+              </button>
+            </div>
+            {(inventario || []).length === 0 ? (
+              <EmptyState icon="📦" msg="Sin activos registrados" />
+            ) : (
+              <table className="owner-table">
+                <thead>
+                  <tr>
+                    <th>Artículo</th>
+                    <th>Propiedad / Ubicación</th>
+                    <th>Stock Actual</th>
+                    <th>Nivel Mínimo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventario.map((a, idx) => {
+                    const isLow = a.cantidad > 0 && a.cantidad <= a.stock_minimo;
+                    const isCritical = a.cantidad <= 0;
+                    return (
+                      <tr key={idx} className={isCritical ? 'stock-alert-critical' : isLow ? 'stock-alert-low' : ''}>
+                        <td><span className="td-bold">{a.activo}</span></td>
+                        <td>{a.propiedad_nombre || 'Global'}</td>
+                        <td><span className="qty-badge">{a.cantidad}</span></td>
+                        <td>{a.stock_minimo || 0}</td>
+                        <td>
+                          {isCritical ? (
+                            <span className="stock-badge stock-critical">⚠️ Sin Stock</span>
+                          ) : isLow ? (
+                            <span className="stock-badge stock-low">⚡ Reordenar</span>
+                          ) : (
+                            <span className="stock-badge stock-ok">✓ OK</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </section>
         )}
@@ -393,7 +479,6 @@ export default function PropietarioDetail() {
               <h2>💰 Liquidación — {MESES[mes - 1]} {anio}</h2>
             </div>
             <div className="liquidacion-layout">
-              {/* Columna izquierda: Ingresos estimados */}
               <div className="liquidacion-card liquidacion-green">
                 <div className="liq-header">
                   <span className="liq-icon">📈</span>
@@ -405,12 +490,11 @@ export default function PropietarioDetail() {
                     <span className="liq-val">{resumen.noches_mes}</span>
                   </div>
                   <div className="liq-item liq-note">
-                    <span>⚠️ El ingreso real depende de la tarifa por noche configurada. Configura tarifas en cada propiedad para calcular automáticamente.</span>
+                    <span>⚠️ El ingreso real depende de la tarifa por noche configurada.</span>
                   </div>
                 </div>
               </div>
 
-              {/* Columna derecha: Gastos */}
               <div className="liquidacion-card liquidacion-red">
                 <div className="liq-header">
                   <span className="liq-icon">📉</span>
@@ -418,11 +502,11 @@ export default function PropietarioDetail() {
                 </div>
                 <div className="liq-items">
                   <div className="liq-item">
-                    <span>🧹 Costo de limpieza ({tareasDelMes.length} tareas completadas)</span>
+                    <span>🧹 Costo de limpieza ({tareasDelMes.length} tareas)</span>
                     <span className="liq-val liq-expense">${costoLimpieza.toLocaleString()}</span>
                   </div>
                   <div className="liq-item">
-                    <span>🔧 Reparaciones (costo estimado)</span>
+                    <span>🔧 Reparaciones (costo est.)</span>
                     <span className="liq-val liq-expense">${costoReparaciones.toLocaleString()}</span>
                   </div>
                   <div className="liq-separator" />
@@ -436,42 +520,148 @@ export default function PropietarioDetail() {
               </div>
             </div>
 
-            {/* Resumen del propietario */}
             <div className="owner-bank-info">
               <h3>🏦 Datos para Transferencia</h3>
               {propietario.datos_bancarios ? (
                 <pre className="bank-data">{propietario.datos_bancarios}</pre>
               ) : (
-                <p className="bank-empty">Sin datos bancarios registrados. Edita el propietario para agregarlos.</p>
-              )}
-            </div>
-
-            {/* Detalle de tareas completadas del mes */}
-            <div className="liq-detail-section">
-              <h3>🧹 Tareas Completadas en {MESES[mes - 1]}</h3>
-              {tareasDelMes.length === 0 ? (
-                <EmptyState icon="🧹" msg={`Sin tareas completadas en ${MESES[mes - 1]} ${anio}`} />
-              ) : (
-                <table className="owner-table">
-                  <thead>
-                    <tr><th>Propiedad</th><th>Fecha</th><th>Tarifa</th></tr>
-                  </thead>
-                  <tbody>
-                    {tareasDelMes.map(t => (
-                      <tr key={t.id}>
-                        <td>{t.propiedad_nombre}</td>
-                        <td>{t.completada_at ? new Date(t.completada_at).toLocaleDateString('es-MX') : '—'}</td>
-                        <td>{t.tarifa_limpieza ? `$${t.tarifa_limpieza}` : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <p className="bank-empty">Sin datos bancarios registrados.</p>
               )}
             </div>
           </section>
         )}
-
       </main>
+
+      {/* ── MODAL: NUEVA TAREA ── */}
+      {showTareaModal && (
+        <div className="owner-modal-overlay">
+          <div className="owner-modal">
+            <h2>🧹 Crear Tarea Manual</h2>
+            <form className="owner-form" onSubmit={handleCreateTarea}>
+              <div className="form-group">
+                <label>Propiedad</label>
+                <select 
+                  required 
+                  value={tareaForm.propiedad_id} 
+                  onChange={e => setTareaForm({...tareaForm, propiedad_id: e.target.value})}
+                >
+                  <option value="">Selecciona una propiedad...</option>
+                  {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Asignar a</label>
+                <select 
+                  required 
+                  value={tareaForm.asignado_a} 
+                  onChange={e => setTareaForm({...tareaForm, asignado_a: e.target.value})}
+                >
+                  <option value="">Selecciona personal...</option>
+                  {(staffList || []).map(s => <option key={s.id} value={s.id}>{s.nombre} ({s.rol})</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Prioridad</label>
+                <select 
+                  value={tareaForm.prioridad} 
+                  onChange={e => setTareaForm({...tareaForm, prioridad: e.target.value})}
+                >
+                  {PRIORIDADES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Fecha</label>
+                <input 
+                  type="date" 
+                  required 
+                  value={tareaForm.fecha_programada}
+                  onChange={e => setTareaForm({...tareaForm, fecha_programada: e.target.value})}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notas</label>
+                <textarea 
+                  placeholder="Instrucciones adicionales..."
+                  value={tareaForm.notas_staff}
+                  onChange={e => setTareaForm({...tareaForm, notas_staff: e.target.value})}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowTareaModal(false)}>Cancelar</button>
+                <button type="submit" className="btn-submit" disabled={submitting}>
+                  {submitting ? 'Creando...' : 'Crear Tarea'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: REGISTRAR INSUMO ── */}
+      {showInvModal && (
+        <div className="owner-modal-overlay">
+          <div className="owner-modal">
+            <h2>📦 Registrar Insumo</h2>
+            <form className="owner-form" onSubmit={handleCreateInv}>
+              <div className="form-group">
+                <label>Nombre del Artículo</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="Ej. Detergente, Sábanas..."
+                  value={invForm.articulo}
+                  onChange={e => setInvForm({...invForm, articulo: e.target.value})}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Propiedad Asignada (Opcional)</label>
+                <select 
+                  value={invForm.propiedad_id} 
+                  onChange={e => setInvForm({...invForm, propiedad_id: e.target.value})}
+                >
+                  <option value="">Global (Tanto del dueño)</option>
+                  {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Stock Actual</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={invForm.stock_actual}
+                    onChange={e => setInvForm({...invForm, stock_actual: Number(e.target.value)})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Nivel Mínimo</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={invForm.stock_minimo}
+                    onChange={e => setInvForm({...invForm, stock_minimo: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowInvModal(false)}>Cancelar</button>
+                <button type="submit" className="btn-submit" disabled={submitting}>
+                  {submitting ? 'Guardando...' : 'Guardar Artículo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

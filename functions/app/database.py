@@ -49,6 +49,8 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
-    """Crea todas las tablas (solo para desarrollo)."""
+    """Crea todas las tablas (solo para desarrollo y migraciones automáticas)."""
+    # Importar TODOS los modelos aquí asegura que Base.metadata los conozca antes de create_all
+    import app.models
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -15,7 +15,9 @@ from app.models.propiedad import Propiedad
 from app.models.reserva import Reserva
 from app.models.tarea_limpieza import TareaLimpieza
 from app.models.incidencia import Incidencia
+from app.models.inventario_articulo import InventarioArticulo
 from app.schemas.propietario import PropietarioCreate, PropietarioUpdate, PropietarioResponse
+from app.schemas.inventario_articulo import InventarioArticuloCreate, InventarioArticuloUpdate, InventarioArticuloResponse
 
 router = APIRouter(prefix="/propietarios", tags=["Propietarios"])
 
@@ -77,6 +79,45 @@ async def eliminar_propietario(propietario_id: str, db: AsyncSession = Depends(g
 
     await db.delete(propietario)
     await db.flush()
+
+# ─── CRUD Inventario ──────────────────────────────────────────
+
+@router.get("/{propietario_id}/inventario/", response_model=list[InventarioArticuloResponse])
+async def listar_inventario(propietario_id: str, db: AsyncSession = Depends(get_db)):
+    """Listar inventario de un propietario."""
+    query = select(InventarioArticulo).where(InventarioArticulo.propietario_id == propietario_id)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+@router.post("/{propietario_id}/inventario/", response_model=InventarioArticuloResponse)
+async def crear_articulo_inventario(propietario_id: str, data: InventarioArticuloCreate, db: AsyncSession = Depends(get_db)):
+    """Crear un nuevo artículo en el inventario."""
+    art = InventarioArticulo(**data.model_dump(), propietario_id=propietario_id)
+    db.add(art)
+    await db.flush()
+    await db.refresh(art)
+    return art
+
+
+@router.put("/{propietario_id}/inventario/{articulo_id}", response_model=InventarioArticuloResponse)
+async def actualizar_articulo_inventario(propietario_id: str, articulo_id: str, data: InventarioArticuloUpdate, db: AsyncSession = Depends(get_db)):
+    """Actualizar artículo del inventario."""
+    result = await db.execute(
+        select(InventarioArticulo).where(InventarioArticulo.id == articulo_id, InventarioArticulo.propietario_id == propietario_id)
+    )
+    art = result.scalar_one_or_none()
+    if not art:
+        raise HTTPException(status_code=404, detail="Artículo no encontrado")
+    
+    update_data = data.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        setattr(art, k, v)
+        
+    await db.flush()
+    await db.refresh(art)
+    return art
+
 
 
 # ─── Dashboard Consolidado ──────────────────────────────────────────────
@@ -174,9 +215,34 @@ async def dashboard_propietario(
                     noches_mes += (fin_real - inicio_real).days
             except (ValueError, TypeError):
                 pass
+                
+    # Inventario desde DB
+    res_inv = await db.execute(
+        select(InventarioArticulo).where(InventarioArticulo.propietario_id == propietario_id)
+    )
+    articulos_db = res_inv.scalars().all()
 
     # Inventario consolidado (todos los activos de todas las propiedades)
     inventario_consolidado = []
+    
+    # Agregar desde DB nueva de inventario
+    for a in articulos_db:
+        prop_nombre = "Global"
+        if a.propiedad_id:
+            prop = next((p for p in propiedades if p.id == a.propiedad_id), None)
+            if prop:
+                prop_nombre = prop.nombre
+        
+        inventario_consolidado.append({
+            "id": a.id,
+            "activo": a.articulo,
+            "cantidad": a.stock_actual,
+            "stock_minimo": a.stock_minimo,
+            "propiedad_id": a.propiedad_id,
+            "propiedad_nombre": prop_nombre,
+        })
+    
+    # Para retrocompatibilidad y migrar fácilmente... 
     for p in propiedades:
         if p.activos_inventario:
             for activo in p.activos_inventario:

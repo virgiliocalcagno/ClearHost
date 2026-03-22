@@ -183,7 +183,24 @@ async def crear_tarea(
     db.add(tarea)
     await db.flush()
     await db.refresh(tarea)
+
+    # Notificar al staff asignado
+    if tarea.asignado_a:
+        from app.services.notifications import notificar_nueva_tarea
+        from app.models.usuario_staff import UsuarioStaff
+        from app.models.propiedad import Propiedad
+        staff_result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.id == tarea.asignado_a))
+        staff = staff_result.scalar_one_or_none()
+        prop_result = await db.execute(select(Propiedad).where(Propiedad.id == tarea.propiedad_id))
+        prop = prop_result.scalar_one_or_none()
+        if staff and prop:
+            try:
+                await notificar_nueva_tarea(tarea, staff, prop)
+            except Exception as e:
+                print(f"Error al enviar push de nueva tarea: {e}")
+
     return tarea
+
 
 
 @router.put("/{tarea_id}", response_model=TareaResponse)
