@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea
+from app.models.tarea_operativa import TareaOperativa, EstadoTarea
 from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.schemas.tarea_limpieza import (
     TareaCreate, TareaUpdate, TareaResponse, TareaConDetalles,

@@ -18,7 +18,8 @@ export default function Login() {
     try {
       await login(identificador, password);
       const staff = getStoredStaff();
-      navigate(staff?.rol === 'ADMIN' ? '/admin' : '/dashboard');
+      const isAdmin = staff?.rol === 'SUPER_ADMIN' || staff?.rol === 'MANAGER_LOCAL';
+      navigate(isAdmin ? '/admin' : '/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Credenciales incorrectas');
     } finally {

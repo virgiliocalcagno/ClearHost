@@ -79,7 +79,7 @@ export default function PropietarioDetail() {
   useEffect(() => {
     if (!isAuthenticated()) { navigate('/'); return; }
     const staff = getStoredStaff();
-    if (staff?.rol !== 'ADMIN') { navigate('/dashboard'); return; }
+    if (!['SUPER_ADMIN', 'MANAGER_LOCAL'].includes(staff?.rol)) { navigate('/dashboard'); return; }
     load();
     loadStaff();
   }, [id, mes, anio]);

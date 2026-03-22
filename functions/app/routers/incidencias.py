@@ -3,6 +3,7 @@ Router de Incidencias — Gestión de reparaciones, misceláneos y aprobaciones.
 """
 
 import os
+import io
 import urllib.parse
 import uuid as uuid_mod
 from uuid import UUID
@@ -15,10 +16,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.config import get_settings
 from app.models.incidencia import Incidencia, TipoIncidencia, EstadoIncidencia
 from app.models.propiedad import Propiedad
 from app.models.usuario_staff import UsuarioStaff
 from app.schemas.incidencia import IncidenciaCreate, IncidenciaUpdate, IncidenciaResponse, IncidenciaConDetalles
+from app.services.sync_service import trigger_sync, trigger_sync_global
 
 router = APIRouter(prefix="/incidencias", tags=["Mantenimiento e Incidencias"])
 
@@ -104,13 +107,22 @@ async def crear_incidencia(
         # 4. Devolver respuesta limpia usando los datos que ya tenemos
         # (Usamos db.refresh solo si es necesario, pero commit ya persistió)
         await db.refresh(incidencia)
+        
+        # Real-time sync: Notificar a admins (global)
+        trigger_sync_global()
+        if incidencia.reportado_por:
+            trigger_sync(incidencia.reportado_por)
+            
         return incidencia
 
     except Exception as e:
-        print(f"CRITICAL ERROR IN CREAR_INCIDENCIA: {str(e)}")
+        print(f"Error crítico en crear_incidencia: {str(e)}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error en servidor al crear incidencia: {str(e)}"
+        )
 
 
 @router.get("/{incidencia_id}", response_model=IncidenciaConDetalles)
@@ -171,7 +183,8 @@ async def subir_foto_incidencia(
     
     # Asegurar bucket explícitamente y Token
     try:
-        bucket = fb_storage.bucket("clearhost-c8919.appspot.com")
+        settings = get_settings()
+        bucket = fb_storage.bucket(settings.FB_STORAGE_BUCKET)
     except:
         bucket = fb_storage.bucket()
         
@@ -180,9 +193,35 @@ async def subir_foto_incidencia(
     
     blob = bucket.blob(filename)
     
-    # Reposicionar y subir (streaming)
-    await foto.seek(0)
-    blob.upload_from_file(foto.file, content_type=foto.content_type or "image/jpeg")
+    # Redimensionar imagen para ahorrar espacio
+    try:
+        from PIL import Image
+        print(f"DEBUG: Pillow version: {Image.__version__}")
+        print(f"DEBUG: Leyendo archivo para redimensionar...")
+        img_data = await foto.read()
+        img = Image.open(io.BytesIO(img_data))
+        
+        # Convertir a RGB si tiene transparencia (PNG/HEIC)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
+        # Redimensionar manteniendo proporción (max 1280px)
+        max_size = (1280, 1280)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Guardar en buffer como JPEG optimizado
+        output_buffer = io.BytesIO()
+        img.save(output_buffer, format="JPEG", quality=85)
+        output_buffer.seek(0)
+        
+        print(f"DEBUG: Subiendo archivo redimensionado ({len(output_buffer.getbuffer())} bytes)...")
+        blob.upload_from_file(output_buffer, content_type="image/jpeg")
+        
+    except Exception as img_err:
+        print(f"DEBUG: Falló el redimensionamiento, subiendo original: {img_err}")
+        # Si falla el redimensionamiento, intentamos subir el original
+        await foto.seek(0)
+        blob.upload_from_file(foto.file, content_type=foto.content_type or "image/jpeg")
     
     # Metadatos del token
     download_token = str(uuid_mod.uuid4())

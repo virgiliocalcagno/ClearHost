@@ -58,7 +58,7 @@ class Reserva(Base):
 
     # Relaciones
     propiedad = relationship("Propiedad", back_populates="reservas")
-    tareas = relationship("TareaLimpieza", back_populates="reserva", lazy="selectin")
+    tareas = relationship("TareaOperativa", back_populates="reserva", lazy="selectin")
 
     def __repr__(self):
         return f"<Reserva {self.nombre_huesped} @ {self.check_in} - {self.check_out}>"

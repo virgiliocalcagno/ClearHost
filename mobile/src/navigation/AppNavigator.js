@@ -13,7 +13,11 @@ import TareaDetalleScreen from '../screens/TareaDetalleScreen';
 import ChecklistScreen from '../screens/ChecklistScreen';
 import AuditoriaScreen from '../screens/AuditoriaScreen';
 import CamaraScreen from '../screens/CamaraScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import VerificacionTareaScreen from '../screens/VerificacionTareaScreen';
+import MisGananciasScreen from '../screens/MisGananciasScreen';
 import { COLORS } from '../theme';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -75,7 +79,23 @@ export default function AppNavigator() {
           component={CamaraScreen}
           options={{ title: 'Evidencia' }}
         />
+        <Stack.Screen
+          name="AdminDashboard"
+          component={AdminDashboardScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="VerificacionTarea"
+          component={VerificacionTareaScreen}
+          options={{ title: 'Revisión de Evidencia' }}
+        />
+        <Stack.Screen
+          name="MisGanancias"
+          component={MisGananciasScreen}
+          options={{ title: 'Mis Ganancias' }}
+        />
       </Stack.Navigator>
+
     </NavigationContainer>
   );
 }

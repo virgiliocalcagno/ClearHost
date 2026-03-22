@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getTareasDeHoy, logout, API_HOST_WS } from '../services/api';
+import { getTareasDeHoy, logout } from '../services/api';
 import TaskCard from '../components/TaskCard';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '../theme';
 
 export default function CalendarioScreen({ navigation, route }) {
@@ -35,31 +36,14 @@ export default function CalendarioScreen({ navigation, route }) {
   useFocusEffect(
     useCallback(() => {
       cargarTareas();
-      
-      // Conectar a WebSockets para actualizaciones reales (sin recargas)
-      const wsUrl = `${API_HOST_WS}/api/tareas/ws/${staff.id}`;
-      const ws = new WebSocket(wsUrl);
-      
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.action === 'RELOAD_TAREAS') {
-            cargarTareas();
-          }
-        } catch (e) {
-          console.error('Error parseando ws message:', e);
-        }
-      };
-
-      ws.onerror = (e) => {
-        console.log('Error en websocket, no es vital, se usa refresh manual como fallback');
-      };
-
-      return () => {
-        ws.close();
-      };
     }, [staff.id])
   );
+
+  // Real-time synchronization via Firebase RTDB
+  useRealtimeSync(staff.id, () => {
+    console.log('[Sync] Update received, refreshing tasks...');
+    cargarTareas();
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -110,9 +94,18 @@ export default function CalendarioScreen({ navigation, route }) {
             <Text style={styles.fecha}>{fechaFormateada}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} activeOpacity={0.7}>
-          <Ionicons name="log-out-outline" size={22} color={COLORS.textSecondary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('MisGanancias', { staff })} 
+            style={styles.walletBtn} 
+            activeOpacity={0.7}
+          >
+            <Ionicons name="wallet-outline" size={22} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} activeOpacity={0.7}>
+            <Ionicons name="log-out-outline" size={22} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Summary Cards */}
@@ -224,6 +217,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  walletBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },

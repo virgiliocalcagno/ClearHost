@@ -29,6 +29,7 @@ bcrypt==4.2.1
 python-dotenv==1.0.1
 pydantic[email-validator,email]==2.10.4
 pydantic-settings==2.7.1
+Pillow==10.3.0
 # Firebase Functions runtime & adapter
 firebase-functions>=0.1.0
 a2wsgi==1.10.7

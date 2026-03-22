@@ -29,8 +29,12 @@ export default function LoginScreen({ navigation }) {
       const staff = await getStoredStaff();
       if (staff) {
         await registerForPushNotifications(staff.id);
-        navigation.replace('Calendario', { staff });
+        const nextScreen = (staff.rol === 'SUPER_ADMIN' || staff.rol === 'MANAGER_LOCAL') 
+          ? 'AdminDashboard' 
+          : 'Calendario';
+        navigation.replace(nextScreen, { staff });
       }
+
     } catch (e) {}
     finally { setLoading(false); }
   };
@@ -44,7 +48,13 @@ export default function LoginScreen({ navigation }) {
     try {
       const data = await login(email.trim(), password);
       await registerForPushNotifications(data.staff.id);
-      navigation.replace('Calendario', { staff: data.staff });
+      
+      const nextScreen = (data.staff.rol === 'SUPER_ADMIN' || data.staff.rol === 'MANAGER_LOCAL') 
+        ? 'AdminDashboard' 
+        : 'Calendario';
+        
+      navigation.replace(nextScreen, { staff: data.staff });
+
     } catch (error) {
       const msg = error.response?.data?.detail || 'Error de conexión';
       Alert.alert('Error de Login', msg);

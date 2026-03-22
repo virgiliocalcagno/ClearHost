@@ -3,6 +3,7 @@ Router de Tareas de Limpieza — CRUD + Checklist + Auditoría + Fotos + Complet
 """
 
 import os
+import io
 import urllib.parse
 import uuid as uuid_mod
 from uuid import UUID
@@ -14,12 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea, PrioridadTarea
+from app.config import get_settings
+from app.models.tarea_operativa import TareaOperativa, EstadoTarea, PrioridadTarea
 from app.models.usuario_staff import UsuarioStaff, RolStaff
-from app.schemas.tarea_limpieza import (
+from app.dependencies import get_current_user
+from app.schemas.tarea_operativa import (
     TareaCreate, TareaUpdate, TareaResponse, TareaConDetalles,
     ChecklistUpdate, AuditoriaUpdate,
 )
+from app.models.propiedad import Propiedad
+from app.services.sync_service import trigger_sync, trigger_sync_global
+
 
 router = APIRouter(prefix="/tareas", tags=["Tareas de Limpieza"])
 
@@ -63,16 +69,34 @@ async def listar_tareas(
     estado: str | None = None,
     asignado_a: UUID | None = None,
     db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(get_current_user),
 ):
-    """Listar tareas con filtros opcionales, enriquecidas con detalles."""
-    query = select(TareaLimpieza)
+    """Listar tareas con filtros opcionales y segregación por roles."""
+    query = select(TareaOperativa)
+    
+    # ── Segregación por Roles ──
+    if current_user.rol == RolStaff.STAFF:
+        # El staff solo ve lo que tiene asignado
+        query = query.where(TareaOperativa.asignado_a == str(current_user.id))
+    elif current_user.rol == RolStaff.MANAGER_LOCAL:
+        # El manager solo ve tareas de propiedades en su zona
+        if current_user.zona_id:
+            query = query.join(Propiedad).where(Propiedad.zona_id == current_user.zona_id)
+        else:
+            # Si un manager no tiene zona asignada, no ve nada por seguridad
+            return []
+    # SUPER_ADMIN sigue viendo todo por defecto
+    
+    # ── Filtros del usuario ──
     if fecha:
-        query = query.where(TareaLimpieza.fecha_programada == fecha)
+        query = query.where(TareaOperativa.fecha_programada == fecha)
     if estado:
-        query = query.where(TareaLimpieza.estado == estado)
-    if asignado_a:
-        query = query.where(TareaLimpieza.asignado_a == str(asignado_a))
-    query = query.order_by(TareaLimpieza.fecha_programada, TareaLimpieza.hora_inicio)
+        query = query.where(TareaOperativa.estado == estado)
+    if asignado_a and current_user.rol != RolStaff.STAFF:
+        query = query.where(TareaOperativa.asignado_a == str(asignado_a))
+        
+    query = query.order_by(TareaOperativa.fecha_programada, TareaOperativa.hora_inicio)
+
     result = await db.execute(query)
     tareas = result.scalars().all()
 
@@ -116,10 +140,10 @@ async def tareas_de_hoy(
     """Obtener tareas del día actual para un miembro del staff (pantalla principal app)."""
     hoy = date.today()
     result = await db.execute(
-        select(TareaLimpieza).where(
-            TareaLimpieza.asignado_a == str(staff_id),
-            TareaLimpieza.fecha_programada == hoy,
-        ).order_by(TareaLimpieza.hora_inicio)
+        select(TareaOperativa).where(
+            TareaOperativa.asignado_a == str(staff_id),
+            TareaOperativa.fecha_programada == hoy,
+        ).order_by(TareaOperativa.hora_inicio)
     )
     tareas = result.scalars().all()
 
@@ -146,7 +170,7 @@ async def obtener_tarea(
 ):
     """Obtener detalle completo de una tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -168,8 +192,8 @@ async def crear_tarea(
     data: TareaCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Crear una tarea de limpieza con prioridad visual (semáforo)."""
-    tarea = TareaLimpieza(**data.model_dump())
+    """Crear una tarea operativa con prioridad visual (semáforo)."""
+    tarea = TareaOperativa(**data.model_dump())
     
     # Calcular semáforo de prioridad (simplificado: si es hoy -> Emergencia, mañana -> Media, +1 -> Baja)
     hoy = date.today()
@@ -199,6 +223,12 @@ async def crear_tarea(
             except Exception as e:
                 print(f"Error al enviar push de nueva tarea: {e}")
 
+    # Real-time sync update
+    if tarea.asignado_a:
+        trigger_sync(tarea.asignado_a)
+    else:
+        trigger_sync_global()
+
     return tarea
 
 
@@ -211,7 +241,7 @@ async def actualizar_tarea(
 ):
     """Actualizar información general de una tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -223,6 +253,11 @@ async def actualizar_tarea(
 
     await db.flush()
     await db.refresh(tarea)
+    
+    # Real-time sync update
+    if tarea.asignado_a: trigger_sync(tarea.asignado_a)
+    else: trigger_sync_global()
+        
     return tarea
 
 
@@ -234,7 +269,7 @@ async def actualizar_checklist(
 ):
     """Actualizar el checklist digital de la tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -259,7 +294,7 @@ async def actualizar_auditoria(
 ):
     """Actualizar la auditoría de activos de la tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -286,7 +321,7 @@ async def subir_foto(
     
     # Buscar tarea en la BD
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -297,22 +332,54 @@ async def subir_foto(
     from firebase_admin import storage as fb_storage
     
     try:
-        # Asegurar bucket explícitamente
+        settings = get_settings()
+        print(f"DEBUG: Intentando usar bucket: {settings.FB_STORAGE_BUCKET}")
+        # Asegurar bucket explícitamente desde configuración
         try:
-            bucket = fb_storage.bucket("clearhost-c8919.appspot.com")
-        except:
+            bucket = fb_storage.bucket(settings.FB_STORAGE_BUCKET)
+            print(f"DEBUG: Bucket obtenido: {bucket.name}")
+        except Exception as be:
+            print(f"DEBUG: Error al obtener bucket explícito: {be}")
             bucket = fb_storage.bucket()
+            print(f"DEBUG: Usando bucket por defecto: {bucket.name}")
         
-        ext = os.path.splitext(foto.filename)[1] if foto.filename else ".jpg"
-        filename = f"evidencias/{tarea_id}/{tipo}_{uuid_mod.uuid4().hex[:8]}{ext}"
+        ext = os.path.splitext(foto.filename)[1].lower() if foto.filename else ".jpg"
+        filename = f"tareas/{tarea_id}/{uuid_mod.uuid4().hex[:8]}{ext}"
+        print(f"DEBUG: Generando archivo en Storage: {filename}")
         
         blob = bucket.blob(filename)
         
-        # Reposicionar puntero y subir (streaming)
-        await foto.seek(0)
-        blob.upload_from_file(foto.file, content_type=foto.content_type or "image/jpeg")
+        # Redimensionar imagen para ahorrar espacio
+        try:
+            from PIL import Image
+            print(f"DEBUG: Pillow version: {Image.__version__}")
+            print(f"DEBUG: Leyendo archivo para redimensionar...")
+            img_data = await foto.read()
+            img = Image.open(io.BytesIO(img_data))
+            
+            # Convertir a RGB si tiene transparencia (PNG/HEIC)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            
+            # Redimensionar manteniendo proporción (max 1280px)
+            max_size = (1280, 1280)
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+            # Guardar en buffer como JPEG optimizado
+            output_buffer = io.BytesIO()
+            img.save(output_buffer, format="JPEG", quality=85)
+            output_buffer.seek(0)
+            
+            print(f"DEBUG: Subiendo archivo redimensionado ({len(output_buffer.getbuffer())} bytes)...")
+            blob.upload_from_file(output_buffer, content_type="image/jpeg")
+            
+        except Exception as img_err:
+            print(f"DEBUG: Falló el redimensionamiento, subiendo original: {img_err}")
+            # Si falla el redimensionamiento, intentamos subir el original
+            await foto.seek(0)
+            blob.upload_from_file(foto.file, content_type=foto.content_type or "image/jpeg")
         
-        # Generar un token de descarga estilo Firebase Client SDK
+        # Metadatos del token (Standard Firebase pattern)
         download_token = str(uuid_mod.uuid4())
         blob.metadata = {"firebaseStorageDownloadTokens": download_token}
         blob.patch() # Persistir metadatos
@@ -340,10 +407,13 @@ async def subir_foto(
         return tarea
 
     except Exception as e:
-        print(f"Error en subir_foto: {e}")
+        print(f"Error crítico en subir_foto: {str(e)}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error al subir foto: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error en servidor al procesar foto: {str(e)}"
+        )
 
 
 @router.put("/{tarea_id}/completar", response_model=TareaResponse)
@@ -357,7 +427,7 @@ async def completar_tarea(
     Dispara notificación push al admin.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -423,7 +493,7 @@ async def asignar_tarea(
     Adicionalmente permite editar la hora de inicio.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -459,8 +529,13 @@ async def asignar_tarea(
     # Notificar por WebSocket al staff anterior y nuevo
     if old_staff_id and old_staff_id != str(staff_id):
         await ws_manager.send_update_to_staff(old_staff_id, {"action": "RELOAD_TAREAS"})
+        trigger_sync(old_staff_id)
     if staff_id:
         await ws_manager.send_update_to_staff(str(staff_id), {"action": "RELOAD_TAREAS"})
+        trigger_sync(str(staff_id))
+    
+    # Global sync for admin panel overview
+    trigger_sync_global()
 
     # Devolver con detalles
     tarea_dict = TareaResponse.model_validate(tarea).model_dump()
@@ -487,9 +562,9 @@ async def auto_asignar_tareas(
     from app.services.task_automation import obtener_staff_disponible
 
     result = await db.execute(
-        select(TareaLimpieza).where(
-            TareaLimpieza.asignado_a == None,
-            TareaLimpieza.estado.in_([EstadoTarea.PENDIENTE, EstadoTarea.EN_PROGRESO]),
+        select(TareaOperativa).where(
+            TareaOperativa.asignado_a == None,
+            TareaOperativa.estado.in_([EstadoTarea.PENDIENTE, EstadoTarea.EN_PROGRESO]),
         )
     )
     tareas_sin_asignar = result.scalars().all()
@@ -520,7 +595,7 @@ async def verificar_tarea(
 ):
     """Admin verifica y aprueba la tarea completada."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -534,6 +609,37 @@ async def verificar_tarea(
 
     tarea.estado = EstadoTarea.VERIFICADA
     tarea.verificada_at = datetime.utcnow()
+    
+    # ── Lógica de Inventario: Descontar Faltantes/Dañados ──
+    try:
+        if tarea.auditoria_activos:
+            from app.models.inventario_articulo import InventarioArticulo
+            from app.services.notifications import notificar_alerta_inventario
+            
+            for item in tarea.auditoria_activos:
+                estado_item = item.get("estado")
+                # Si está FALTANTE o DAÑADO, descontamos 1 unidad del stock general
+                if estado_item in ("FALTANTE", "DAÑADO"):
+                    articulo_nombre = item.get("articulo")
+                    # Buscar en inventario para esta propiedad o zona
+                    result_inv = await db.execute(
+                        select(InventarioArticulo).where(
+                            InventarioArticulo.propiedad_id == tarea.propiedad_id,
+                            InventarioArticulo.articulo == articulo_nombre
+                        )
+                    )
+                    inv_item = result_inv.scalar_one_or_none()
+                    
+                    if inv_item:
+                        inv_item.stock_actual = max(0, inv_item.stock_actual - 1)
+                        logger.info(f"Inventario: {articulo_nombre} -1 por reporte en tarea {tarea.id}")
+                        
+                        # Alerta stock mínimo
+                        if inv_item.stock_actual < inv_item.stock_minimo:
+                            await notificar_alerta_inventario(inv_item, db)
+    except Exception as e:
+        logger.error(f"Error procesando inventario tras verificación: {e}")
+
     await db.flush()
     await db.refresh(tarea)
     return tarea
@@ -549,7 +655,7 @@ async def generar_link_whatsapp(
     Genera un link único de la tarea para enviar al staff.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -596,7 +702,7 @@ async def aceptar_tarea(
 ):
     """Staff marca la tarea asignada como ACEPTADA."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == str(tarea_id))
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
     )
     tarea = result.scalar_one_or_none()
     if not tarea:

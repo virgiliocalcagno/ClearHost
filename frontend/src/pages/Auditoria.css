@@ -29,7 +29,7 @@
 
 .stat-done { border-top-color: var(--success); }
 .stat-pending { border-top-color: var(--error); }
-.stat-num { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+.stat-num { font-size: 20px; font-weight: 800; color: var(--text); }
 .stat-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-top: 2px; }
 
 /* Advertencias */
@@ -75,7 +75,7 @@
 .aud-item-top h4 { 
   font-size: 16px; 
   font-weight: 700; 
-  color: var(--text-primary);
+  color: var(--text);
   letter-spacing: -0.01em;
 }
 

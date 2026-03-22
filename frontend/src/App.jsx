@@ -19,7 +19,8 @@ function ProtectedRoute({ children }) {
 function AdminRoute({ children }) {
   if (!isAuthenticated()) return <Navigate to="/" />;
   const staff = getStoredStaff();
-  if (staff?.rol !== 'ADMIN') return <Navigate to="/dashboard" />;
+  const isAdmin = staff?.rol === 'SUPER_ADMIN' || staff?.rol === 'MANAGER_LOCAL';
+  if (!isAdmin) return <Navigate to="/dashboard" />;
   return children;
 }
 

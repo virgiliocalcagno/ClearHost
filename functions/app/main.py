@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios
+from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios, zonas, gastos
 from app.services.scheduler import setup_scheduler, shutdown_scheduler
 
 # Configurar logging
@@ -97,6 +97,8 @@ app.include_router(reservas.router, prefix="/api")
 app.include_router(tareas.router, prefix="/api")
 app.include_router(incidencias.router, prefix="/api")
 app.include_router(propietarios.router, prefix="/api")
+app.include_router(gastos.router, prefix="/api")
+app.include_router(zonas.router)  # ya tiene prefix /api/zonas internamente
 
 
 @app.get("/")

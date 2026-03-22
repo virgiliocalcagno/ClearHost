@@ -10,7 +10,7 @@ from sqlalchemy import select, delete
 from app.database import engine
 from app.models.propiedad import Propiedad
 from app.models.reserva import Reserva, FuenteReserva, EstadoReserva
-from app.models.tarea_limpieza import TareaLimpieza, EstadoTarea
+from app.models.tarea_operativa import TareaOperativa, EstadoTarea
 from app.models.usuario_staff import UsuarioStaff
 
 
@@ -21,7 +21,7 @@ async def seed():
     async with AsyncSession(engine) as session:
         async with session.begin():
             # Limpiar datos previos (orden por FK)
-            await session.execute(delete(TareaLimpieza))
+            await session.execute(delete(TareaOperativa))
             await session.execute(delete(Reserva))
             await session.execute(delete(Propiedad))
 
@@ -46,6 +46,10 @@ async def seed():
                 direccion="Calle Kukulcán 45, Zona Hotelera",
                 ciudad="Cancún",
                 num_habitaciones=3,
+                cobro_propietario=65.0,
+                moneda_cobro="USD",
+                pago_staff=1800.0,
+                moneda_pago="MXN",
                 checklist_template=[
                     {"item": "Papel de baño en todos los baños", "requerido": True},
                     {"item": "Sábanas limpias en todas las camas", "requerido": True},
@@ -70,6 +74,10 @@ async def seed():
                 direccion="Av. Reforma 220, Piso 8",
                 ciudad="Ciudad de México",
                 num_habitaciones=2,
+                cobro_propietario=45.0,
+                moneda_cobro="USD",
+                pago_staff=1200.0,
+                moneda_pago="MXN",
                 checklist_template=[
                     {"item": "Papel de baño en todos los baños", "requerido": True},
                     {"item": "Sábanas limpias en todas las camas", "requerido": True},
@@ -151,15 +159,18 @@ async def seed():
         res1_id = res_ids[0]
         res2_id = res_ids[1]
 
-        # --- Tareas de limpieza (hoy, asignadas a Maria) ---
+        # --- Tareas operativas (hoy, asignadas a Maria) ---
         async with session.begin():
-            tarea1 = TareaLimpieza(
+            tarea1 = TareaOperativa(
                 reserva_id=res1_id,
                 propiedad_id=prop1_id,
                 asignado_a=maria_id,
                 fecha_programada=hoy,
                 hora_inicio=time(11, 0),
                 estado=EstadoTarea.PENDIENTE,
+                tipo_tarea="LIMPIEZA",
+                pago_al_staff=1800.0,
+                moneda_tarea="MXN",
                 checklist=[
                     {"item": "Papel de baño en todos los baños", "completado": False, "requerido": True},
                     {"item": "Sábanas limpias en todas las camas", "completado": False, "requerido": True},
@@ -178,13 +189,16 @@ async def seed():
                 ],
                 requiere_lavado_ropa=True,
             )
-            tarea2 = TareaLimpieza(
+            tarea2 = TareaOperativa(
                 reserva_id=res2_id,
                 propiedad_id=prop2_id,
                 asignado_a=maria_id,
                 fecha_programada=hoy,
                 hora_inicio=time(14, 0),
                 estado=EstadoTarea.PENDIENTE,
+                tipo_tarea="LIMPIEZA",
+                pago_al_staff=1200.0,
+                moneda_tarea="MXN",
                 checklist=[
                     {"item": "Papel de baño en todos los baños", "completado": False, "requerido": True},
                     {"item": "Sábanas limpias en todas las camas", "completado": False, "requerido": True},
@@ -204,9 +218,10 @@ async def seed():
             session.add_all([tarea1, tarea2])
 
         print(f"\n✅ Seed completado:")
-        print(f"   3 propiedades")
+        print(f"   3 propiedades (con tarifario inicial)")
         print(f"   3 reservas")
-        print(f"   2 tareas de limpieza asignadas a Maria para hoy ({hoy})")
+        print(f"   2 tareas operativas (LIMPIEZA) asignadas a Maria para hoy ({hoy})")
 
 
-asyncio.run(seed())
+if __name__ == "__main__":
+    asyncio.run(seed())

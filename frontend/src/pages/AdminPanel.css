@@ -621,3 +621,22 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+@keyframes pulse-emergency {
+  0% { 
+    transform: scale(1); 
+    box-shadow: 0 4px 14px rgba(239,68,68,0.3);
+    border-color: rgba(239,68,68,1);
+  }
+  50% { 
+    transform: scale(1.02); 
+    box-shadow: 0 4px 25px rgba(239,68,68,0.6);
+    background-color: #ffeaea;
+    border-color: rgba(239,68,68,0.5);
+  }
+  100% { 
+    transform: scale(1); 
+    box-shadow: 0 4px 14px rgba(239,68,68,0.3);
+    border-color: rgba(239,68,68,1);
+  }
+}

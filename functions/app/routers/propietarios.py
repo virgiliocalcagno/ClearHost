@@ -13,7 +13,7 @@ from app.database import get_db
 from app.models.propietario import Propietario
 from app.models.propiedad import Propiedad
 from app.models.reserva import Reserva
-from app.models.tarea_limpieza import TareaLimpieza
+from app.models.tarea_limpieza import TareaOperativa
 from app.models.incidencia import Incidencia
 from app.models.inventario_articulo import InventarioArticulo
 from app.schemas.propietario import PropietarioCreate, PropietarioUpdate, PropietarioResponse
@@ -179,8 +179,8 @@ async def dashboard_propietario(
 
     # 4. Tareas de sus propiedades
     res_tareas = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.propiedad_id.in_(propiedad_ids))
-        .order_by(TareaLimpieza.fecha_programada.desc())
+        select(TareaOperativa).where(TareaOperativa.propiedad_id.in_(propiedad_ids))
+        .order_by(TareaOperativa.fecha_programada.desc())
     )
     tareas = res_tareas.scalars().all()
 
@@ -317,7 +317,7 @@ def _serialize_reserva(r: Reserva, prop_ids: list, propiedades: list) -> dict:
     }
 
 
-def _serialize_tarea(t: TareaLimpieza, propiedades: list) -> dict:
+def _serialize_tarea(t: TareaOperativa, propiedades: list) -> dict:
     prop = next((p for p in propiedades if p.id == t.propiedad_id), None)
     return {
         "id": str(t.id),

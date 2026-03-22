@@ -30,6 +30,18 @@ class Propiedad(Base):
         lazy="selectin"
     )
 
+    # ── Operación y Supervisión ──
+    # Zona geográfica o administrativa — FK a tabla zonas
+    zona_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("zonas.id"), nullable=True, index=True
+    )
+    zona: Mapped["Zona | None"] = relationship("Zona", back_populates="propiedades", lazy="selectin")
+    # Manager local responsable de esta unidad
+    manager_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("usuarios_staff.id"), nullable=True, index=True
+    )
+
+
     # ── Datos básicos (visibles para staff) ──
     nombre: Mapped[str] = mapped_column(String(200), nullable=False)
     direccion: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -75,8 +87,16 @@ class Propiedad(Base):
     tiene_estacionamiento: Mapped[bool] = mapped_column(Boolean, default=False)
     detalles_estacionamiento: Mapped[str | None] = mapped_column(String(500), nullable=True, comment="Ubicación del cajón, número, etc.")
 
-    # ── Información operativa ──
-    tarifa_limpieza: Mapped[float | None] = mapped_column(Float, nullable=True, comment="Costo de limpieza por turno")
+    # ── Información operativa y financiera (Doble Tarifario) ──
+    # Lo que se cobra al propietario por la limpieza/operación
+    cobro_propietario: Mapped[float | None] = mapped_column(Float, default=0.0, comment="Cobro al dueño")
+    moneda_cobro: Mapped[str | None] = mapped_column(String(10), default="MXN")
+    
+    # Lo que se paga al staff por la operación de esta unidad
+    pago_staff: Mapped[float | None] = mapped_column(Float, default=0.0, comment="Pago al staff")
+    moneda_pago: Mapped[str | None] = mapped_column(String(10), default="MXN")
+
+    tarifa_limpieza: Mapped[float | None] = mapped_column(Float, nullable=True, comment="Costo de limpieza base (Deprecado)")
     contacto_emergencia: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Nombre y teléfono de contacto de emergencia")
     contacto_mantenimiento: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Plomero, electricista, etc.")
     dia_basura: Mapped[str | None] = mapped_column(String(100), nullable=True, comment="Días que pasa el camión de basura")
@@ -131,7 +151,7 @@ class Propiedad(Base):
 
     # Relaciones
     reservas = relationship("Reserva", back_populates="propiedad", lazy="selectin")
-    tareas = relationship("TareaLimpieza", back_populates="propiedad", lazy="selectin")
+    tareas = relationship("TareaOperativa", back_populates="propiedad", lazy="selectin")
 
     # Propiedades dinámicas
     @property

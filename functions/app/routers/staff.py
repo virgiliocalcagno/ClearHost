@@ -13,12 +13,74 @@ from jose import jwt
 
 from app.database import get_db
 from app.config import get_settings
-from app.models.usuario_staff import UsuarioStaff, RolStaff
+from app.models.tarea_limpieza import TareaOperativa, EstadoTarea
+from app.models.adelanto_staff import AdelantoStaff
 from app.schemas.usuario_staff import (
     StaffCreate, StaffUpdate, StaffResponse,
     StaffLogin, TokenResponse, FCMTokenUpdate,
-    ForgotPasswordRequest, ResetPasswordRequest
+    ForgotPasswordRequest, ResetPasswordRequest,
+    AdelantoCreate, AdelantoResponse, BilleteraResponse
 )
+
+
+@router.get("/{staff_id}/billetera", response_model=BilleteraResponse)
+async def obtener_billetera_staff(
+    staff_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Calcula el balance financiero de un miembro del staff.
+    Total Ganado (tareas VERIFICADAS) - Total Adelantos.
+    """
+    # 1. Sumar tareas verificadas
+    result_tareas = await db.execute(
+        select(TareaOperativa).where(
+            TareaOperativa.asignado_a == str(staff_id),
+            TareaOperativa.estado == EstadoTarea.VERIFICADA
+        )
+    )
+    tareas = result_tareas.scalars().all()
+    total_ganado = sum(t.pago_al_staff for t in tareas)
+    
+    # 2. Sumar adelantos
+    result_adelantos = await db.execute(
+        select(AdelantoStaff).where(AdelantoStaff.staff_id == str(staff_id))
+    )
+    adelantos = result_adelantos.scalars().all()
+    total_adelantos = sum(a.monto for a in adelantos)
+    
+    # Historial de tareas para la app móvil (Privacy Wall: solo lo que ganó el staff)
+    historial = [
+        {
+            "fecha": t.fecha_programada,
+            "tipo": t.tipo_tarea,
+            "monto": t.pago_al_staff,
+            "moneda": t.moneda_tarea,
+            "estado": t.estado.value
+        }
+        for t in tareas
+    ]
+    
+    return BilleteraResponse(
+        total_ganado=total_ganado,
+        total_adelantos=total_adelantos,
+        saldo_neto=total_ganado - total_adelantos,
+        moneda="MXN", # O la moneda principal del sistema
+        historial_tareas=historial
+    )
+
+
+@router.post("/adelantos", response_model=AdelantoResponse, status_code=status.HTTP_201_CREATED)
+async def registrar_adelanto(
+    data: AdelantoCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Registrar un nuevo adelanto de pago para un staff."""
+    adelanto = AdelantoStaff(**data.model_dump())
+    db.add(adelanto)
+    await db.commit()
+    await db.refresh(adelanto)
+    return adelanto
 from jose import JWTError
 
 router = APIRouter(prefix="/staff", tags=["Staff"])
@@ -82,10 +144,11 @@ async def listar_staff_disponible(
     """Listar staff con rol LIMPIEZA que está disponible."""
     result = await db.execute(
         select(UsuarioStaff).where(
-            UsuarioStaff.rol == RolStaff.LIMPIEZA,
+            UsuarioStaff.rol == RolStaff.STAFF,
             UsuarioStaff.disponible == True,
         ).order_by(UsuarioStaff.nombre)
     )
+
     return result.scalars().all()
 
 

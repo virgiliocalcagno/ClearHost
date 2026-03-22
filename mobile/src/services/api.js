@@ -96,7 +96,22 @@ export const aceptarTarea = async (tareaId) => {
   return res.data;
 };
 
+export const verificarTarea = async (tareaId) => {
+  const res = await api.put(`/tareas/${tareaId}/verificar`);
+  return res.data;
+};
+
+export const getTodasLasTareas = async (params = {}) => {
+  const res = await api.get('/tareas/', { params });
+  return res.data;
+};
+
 // ========== STAFF ==========
+export const getBilletera = async (staffId) => {
+  const res = await api.get(`/staff/${staffId}/billetera`);
+  return res.data;
+};
+
 export const actualizarFCMToken = async (staffId, fcmToken) => {
   const res = await api.put(`/staff/${staffId}/fcm-token`, { fcm_token: fcmToken });
   return res.data;

@@ -80,7 +80,7 @@ class Incidencia(Base):
 
     # Relaciones
     propiedad = relationship("Propiedad", backref="incidencias", lazy="selectin")
-    tarea = relationship("TareaLimpieza", backref="incidencias", lazy="selectin")
+    tarea = relationship("TareaOperativa", backref="incidencias", lazy="selectin")
     reportero = relationship("UsuarioStaff", backref="incidencias_reportadas", lazy="selectin")
 
     def __repr__(self):

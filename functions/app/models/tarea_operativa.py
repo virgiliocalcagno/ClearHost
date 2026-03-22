@@ -29,8 +29,8 @@ class PrioridadTarea(str, enum.Enum):
     BAJA = "BAJA"
 
 
-class TareaLimpieza(Base):
-    __tablename__ = "tareas_limpieza"
+class TareaOperativa(Base):
+    __tablename__ = "tareas_operativas"
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -46,6 +46,8 @@ class TareaLimpieza(Base):
         String(36), ForeignKey("usuarios_staff.id"), nullable=True
     )
 
+    # ── Datos de la Tarea ──
+    tipo_tarea: Mapped[str] = mapped_column(String(50), default="LIMPIEZA", comment="LIMPIEZA, MANTENIMIENTO, DILIGENCIA")
     fecha_programada: Mapped[date] = mapped_column(Date, nullable=False)
     hora_inicio: Mapped[time | None] = mapped_column(Time, nullable=True)
 
@@ -54,8 +56,12 @@ class TareaLimpieza(Base):
     )
     
     prioridad: Mapped[PrioridadTarea] = mapped_column(
-        String(20), default=PrioridadTarea.BAJA, nullable=False
+        SQLEnum(PrioridadTarea), default=PrioridadTarea.BAJA, nullable=False
     )
+
+    # ── Datos Financieros (Doble Tarifario) ──
+    pago_al_staff: Mapped[float] = mapped_column(Float, default=0.0, comment="Pago por esta tarea")
+    moneda_tarea: Mapped[str] = mapped_column(String(10), default="MXN")
     
     fecha_asignacion: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -85,4 +91,4 @@ class TareaLimpieza(Base):
     asignado = relationship("UsuarioStaff", back_populates="tareas_asignadas", lazy="selectin")
 
     def __repr__(self):
-        return f"<TareaLimpieza {self.fecha_programada} - {self.estado.value}>"
+        return f"<TareaOperativa {self.fecha_programada} - {self.estado.value}>"

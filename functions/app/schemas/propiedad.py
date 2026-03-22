@@ -29,6 +29,11 @@ class PropiedadCreate(BaseModel):
     hora_checkout: Optional[time] = None
     hora_checkin: Optional[time] = None
     propietario_id: Optional[str] = None
+    zona_id: Optional[str] = None
+    cobro_propietario: float = 0.0
+    moneda_cobro: str = "MXN"
+    pago_staff: float = 0.0
+    moneda_pago: str = "MXN"
 
 
 class PropiedadUpdate(BaseModel):
@@ -44,6 +49,11 @@ class PropiedadUpdate(BaseModel):
     hora_checkout: Optional[time] = None
     hora_checkin: Optional[time] = None
     propietario_id: Optional[str] = None
+    zona_id: Optional[str] = None
+    cobro_propietario: Optional[float] = None
+    moneda_cobro: Optional[str] = None
+    pago_staff: Optional[float] = None
+    moneda_pago: Optional[str] = None
 
 
 class PropiedadResponse(BaseModel):
@@ -62,7 +72,21 @@ class PropiedadResponse(BaseModel):
     hora_checkin: Optional[time] = None
     propietario_id: Optional[str] = None
     propietario_nombre: Optional[str] = None
+    zona_id: Optional[str] = None
+    zona_nombre: Optional[str] = None
+    cobro_propietario: float = 0.0
+    moneda_cobro: str = "MXN"
+    pago_staff: float = 0.0
+    moneda_pago: str = "MXN"
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        data = super().model_validate(obj, **kwargs)
+        # Resolver nombre de zona desde la relación ORM
+        if hasattr(obj, 'zona') and obj.zona:
+            data.zona_nombre = obj.zona.nombre
+        return data

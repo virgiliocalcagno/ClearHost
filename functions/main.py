@@ -3,10 +3,15 @@ from a2wsgi import ASGIMiddleware
 from app.main import app as fastapi_app
 import firebase_admin
 
+# DB Migration v2 applied: rolstaff enum updated, CLEAN_AND_READY added, zona_id/manager_id columns added (2026-03-21)
+
 # Inicializar Firebase Admin una sola vez al cargar el módulo
 if not firebase_admin._apps:
+    from app.config import get_settings
+    settings = get_settings()
     firebase_admin.initialize_app(options={
-        "storageBucket": "clearhost-c8919.appspot.com"
+        "storageBucket": settings.FB_STORAGE_BUCKET,
+        "databaseURL": settings.FB_DATABASE_URL
     })
 
 # Adaptador para ASGI -> WSGI

@@ -124,6 +124,16 @@ export const actualizarStaff = async (staffId, data) => {
   return res.data;
 };
 
+export const getBilleteraStaff = async (staffId) => {
+  const res = await api.get(`/staff/${staffId}/billetera`);
+  return res.data;
+};
+
+export const crearAdelanto = async (data) => {
+  const res = await api.post('/staff/adelantos', data);
+  return res.data;
+};
+
 // ========== PROPIETARIOS ==========
 export const getPropietarios = async () => {
   const res = await api.get('/propietarios/');

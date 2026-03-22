@@ -3,6 +3,7 @@ ClearHost PMS — Configuración de la aplicación.
 Carga variables de entorno desde .env
 """
 
+import os
 from typing import Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
@@ -19,6 +20,8 @@ class Settings(BaseSettings):
 
     # Firebase
     SERVICE_ACCOUNT_PATH: Optional[str] = None
+    FB_STORAGE_BUCKET: str = os.getenv("FB_STORAGE_BUCKET", "clearhost-c8919-evidencias")
+    FB_DATABASE_URL: str = os.getenv("FB_DATABASE_URL", "https://clearhost-c8919-default-rtdb.firebaseio.com/")
 
     # App
     APP_NAME: str = "ClearHost PMS"
