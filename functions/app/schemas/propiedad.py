@@ -28,6 +28,7 @@ class PropiedadCreate(BaseModel):
     notas: Optional[str] = None
     hora_checkout: Optional[time] = None
     hora_checkin: Optional[time] = None
+    propietario_id: Optional[str] = None
 
 
 class PropiedadUpdate(BaseModel):
@@ -42,6 +43,7 @@ class PropiedadUpdate(BaseModel):
     activa: Optional[bool] = None
     hora_checkout: Optional[time] = None
     hora_checkin: Optional[time] = None
+    propietario_id: Optional[str] = None
 
 
 class PropiedadResponse(BaseModel):
@@ -58,6 +60,8 @@ class PropiedadResponse(BaseModel):
     activa: bool
     hora_checkout: Optional[time] = None
     hora_checkin: Optional[time] = None
+    propietario_id: Optional[str] = None
+    propietario_nombre: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

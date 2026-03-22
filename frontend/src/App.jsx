@@ -10,6 +10,7 @@ import AdminPanel from './pages/AdminPanel';
 import OlvidePassword from './pages/OlvidePassword';
 import RecuperarPassword from './pages/RecuperarPassword';
 import AprobarReparacion from './pages/AprobarReparacion';
+import PropietarioDetail from './pages/PropietarioDetail';
 
 function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/" />;
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+        <Route path="/admin/propietarios/:id" element={<AdminRoute><PropietarioDetail /></AdminRoute>} />
         <Route path="/tarea/:id" element={<ProtectedRoute><TareaDetalle /></ProtectedRoute>} />
         <Route path="/tarea/:id/checklist" element={<ProtectedRoute><Checklist /></ProtectedRoute>} />
         <Route path="/tarea/:id/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />

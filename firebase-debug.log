@@ -1,0 +1,122 @@
+[debug] [2026-03-21T23:45:23.622Z] ----------------------------------------------------------------------
+[debug] [2026-03-21T23:45:23.624Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\virgi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-03-21T23:45:23.624Z] CLI Version:   15.5.1
+[debug] [2026-03-21T23:45:23.624Z] Platform:      win32
+[debug] [2026-03-21T23:45:23.624Z] Node Version:  v24.13.0
+[debug] [2026-03-21T23:45:23.624Z] Time:          Sat Mar 21 2026 19:45:23 GMT-0400 (Atlantic Standard Time)
+[debug] [2026-03-21T23:45:23.624Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-03-21T23:45:24.806Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-21T23:45:24.806Z] > authorizing via signed-in user (virgiliocalcagno@gmail.com)
+[debug] [2026-03-21T23:45:24.807Z] [iam] checking project clearhost-c8919 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-03-21T23:45:24.807Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:24.807Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:24.808Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions [none]
+[debug] [2026-03-21T23:45:24.808Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions  x-goog-user-project=clearhost-c8919
+[debug] [2026-03-21T23:45:24.808Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-03-21T23:45:25.197Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions 200
+[debug] [2026-03-21T23:45:25.197Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/clearhost-c8919:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-03-21T23:45:25.198Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:25.198Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:25.198Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919 [none]
+[debug] [2026-03-21T23:45:25.505Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919 200
+[debug] [2026-03-21T23:45:25.505Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/clearhost-c8919 {"projectId":"clearhost-c8919","projectNumber":"986952569979","displayName":"ClearHost","name":"projects/clearhost-c8919","resources":{"hostingSite":"clearhost-c8919"},"state":"ACTIVE","etag":"1_768ec10b-be64-45b0-8ba2-e00458408615"}
+[info] 
+[info] === Deploying to 'clearhost-c8919'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-03-21T23:45:25.514Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:25.514Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:25.514Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions [none]
+[debug] [2026-03-21T23:45:25.514Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-03-21T23:45:26.650Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions 200
+[debug] [2026-03-21T23:45:26.650Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions {"name":"projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[clearhost-c8919]: beginning deploy... 
+[info] i  hosting[clearhost-c8919]: found 5 files in frontend/dist 
+[debug] [2026-03-21T23:45:26.671Z] [hosting] uploading with 200 concurrency
+[debug] [2026-03-21T23:45:26.720Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:26.720Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:26.723Z] [hosting] hash cache [ZnJvbnRlbmRcZGlzdA] stored for 5 files
+[debug] [2026-03-21T23:45:26.723Z] [hosting][hash queue][FINAL] {"max":42,"min":1,"avg":14,"active":0,"complete":5,"success":5,"errored":0,"retried":0,"total":5,"elapsed":48}
+[debug] [2026-03-21T23:45:26.724Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96:populateFiles [none]
+[debug] [2026-03-21T23:45:26.724Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96:populateFiles {"files":{"/icons.svg":"a71fc7c82918feffdb1e7e59f1b494531849b1025cedc75bc6c0dfa2a941d54d","/favicon.svg":"44fea64ea0b4986cf22dbc28741fe402f021baf13dbd2cc8ce6aa04b24300573","/index.html":"bfe1a7ab0f431dda39816ada5d512f53a2bc63f9480c2512939d384ac9f95ada","/assets/index-DWm7Grif.css":"890b991ae2488c9c0827db6627ac12aa750ca056c712a97e5b4ce11942a14f94","/assets/index-CotOr-bp.js":"aec3114fea79fe30f93ffb9a222d52eaca7df995db74e12465e6803700f969cc"}}
+[debug] [2026-03-21T23:45:27.518Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96:populateFiles 200
+[debug] [2026-03-21T23:45:27.518Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96:populateFiles {"uploadRequiredHashes":["bfe1a7ab0f431dda39816ada5d512f53a2bc63f9480c2512939d384ac9f95ada","aec3114fea79fe30f93ffb9a222d52eaca7df995db74e12465e6803700f969cc"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files"}
+[debug] [2026-03-21T23:45:27.518Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:27.518Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:27.519Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:27.519Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:27.519Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/bfe1a7ab0f431dda39816ada5d512f53a2bc63f9480c2512939d384ac9f95ada [none]
+[debug] [2026-03-21T23:45:27.519Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/bfe1a7ab0f431dda39816ada5d512f53a2bc63f9480c2512939d384ac9f95ada [stream]
+[debug] [2026-03-21T23:45:27.520Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/aec3114fea79fe30f93ffb9a222d52eaca7df995db74e12465e6803700f969cc [none]
+[debug] [2026-03-21T23:45:27.520Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/aec3114fea79fe30f93ffb9a222d52eaca7df995db74e12465e6803700f969cc [stream]
+[debug] [2026-03-21T23:45:27.521Z] [hosting][populate queue][FINAL] {"max":800,"min":800,"avg":800,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":802}
+[debug] [2026-03-21T23:45:27.521Z] [hosting] uploads queued: 2
+[debug] [2026-03-21T23:45:28.363Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/aec3114fea79fe30f93ffb9a222d52eaca7df995db74e12465e6803700f969cc 200
+[debug] [2026-03-21T23:45:28.363Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/aec3114fea79fe30f93ffb9a222d52eaca7df995db74e12465e6803700f969cc [stream]
+[debug] [2026-03-21T23:45:28.603Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/bfe1a7ab0f431dda39816ada5d512f53a2bc63f9480c2512939d384ac9f95ada 200
+[debug] [2026-03-21T23:45:28.603Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/clearhost-c8919/versions/bb4a976e2afc8d96/files/bfe1a7ab0f431dda39816ada5d512f53a2bc63f9480c2512939d384ac9f95ada [stream]
+[debug] [2026-03-21T23:45:28.603Z] [hosting][upload queue][FINAL] {"max":1085,"min":844,"avg":964.5,"active":0,"complete":2,"success":2,"errored":0,"retried":0,"total":2,"elapsed":1085}
+[info] i  hosting: upload complete 
+[info] +  hosting[clearhost-c8919]: file upload complete 
+[debug] [2026-03-21T23:45:28.603Z] [hosting] deploy completed after 1948ms
+[debug] [2026-03-21T23:45:28.604Z] [
+  {
+    "config": {
+      "public": "frontend/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "function": {
+            "functionId": "backend",
+            "region": "us-central1"
+          }
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "site": "clearhost-c8919"
+    },
+    "version": "projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96"
+  }
+]
+[info] i  hosting[clearhost-c8919]: finalizing version... 
+[debug] [2026-03-21T23:45:28.605Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:28.605Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:28.605Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/clearhost-c8919/locations/-/functions [none]
+[debug] [2026-03-21T23:45:29.293Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/clearhost-c8919/locations/-/functions 200
+[debug] [2026-03-21T23:45:29.293Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/clearhost-c8919/locations/-/functions {}
+[debug] [2026-03-21T23:45:29.294Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:29.294Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:29.294Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/clearhost-c8919/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-03-21T23:45:29.811Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/clearhost-c8919/locations/-/functions 200
+[debug] [2026-03-21T23:45:29.811Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/clearhost-c8919/locations/-/functions {"functions":[{"name":"projects/clearhost-c8919/locations/us-central1/functions/backend","buildConfig":{"build":"projects/986952569979/locations/us-central1/builds/78e454f5-6203-4c0e-af08-ca8abde5dabc","runtime":"python311","entryPoint":"backend","source":{"storageSource":{"bucket":"gcf-v2-sources-986952569979-us-central1","object":"backend/function-source.zip","generation":"1774136496123807"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/clearhost-c8919/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-986952569979-us-central1","object":"backend/function-source.zip","generation":"1774136496123807"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/clearhost-c8919/serviceAccounts/986952569979-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/clearhost-c8919/locations/us-central1/services/backend","timeoutSeconds":60,"environmentVariables":{"DATABASE_URL":"postgresql+asyncpg://neondb_owner:npg_Q8DNcmCL6ZgJ@ep-odd-salad-amnmroia-pooler.c-5.us-east-1.aws.neon.tech/neondb?ssl=require","SECRET_KEY":"dev-secret-key-clearhost-2024","ALGORITHM":"HS256","ACCESS_TOKEN_EXPIRE_MINUTES":"1440","SERVICE_ACCOUNT_PATH":"./firebase-credentials.json","APP_NAME":"ClearHost PMS","DEBUG":"true","SMTP_USER":"pega_tu_correo_gmail_aqui@gmail.com","SMTP_PASSWORD":"pega_tu_contrasena_de_aplicacion_aqui","SMTP_HOST":"smtp.gmail.com","SMTP_PORT":"465","FIREBASE_CONFIG":"{\"projectId\":\"clearhost-c8919\",\"storageBucket\":\"clearhost-c8919.firebasestorage.app\"}","GCLOUD_PROJECT":"clearhost-c8919","EVENTARC_CLOUD_EVENT_SOURCE":"projects/clearhost-c8919/locations/us-central1/services/backend","FUNCTION_TARGET":"backend","LOG_EXECUTION_ID":"true"},"maxInstanceCount":20,"ingressSettings":"ALLOW_ALL","uri":"https://backend-3bjrskykwq-uc.a.run.app","serviceAccountEmail":"986952569979-compute@developer.gserviceaccount.com","availableMemory":"1024Mi","allTrafficOnLatestRevision":true,"revision":"backend-00034-duz","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2026-03-21T23:43:09.913084717Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"0b44b2e47c55dc6127447aeab28e3c7fa00e4d32"},"environment":"GEN_2","url":"https://us-central1-clearhost-c8919.cloudfunctions.net/backend","createTime":"2026-03-20T06:15:38.558589811Z","satisfiesPzi":true}]}
+[debug] [2026-03-21T23:45:29.813Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:29.813Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:29.813Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions/bb4a976e2afc8d96 updateMask=status%2Cconfig
+[debug] [2026-03-21T23:45:29.813Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions/bb4a976e2afc8d96 {"status":"FINALIZED","config":{"rewrites":[{"glob":"/api/**","run":{"serviceId":"backend","region":"us-central1"}},{"glob":"**","path":"/index.html"}]}}
+[debug] [2026-03-21T23:45:30.553Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions/bb4a976e2afc8d96 200
+[debug] [2026-03-21T23:45:30.553Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/versions/bb4a976e2afc8d96 {"name":"projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96","status":"FINALIZED","config":{"rewrites":[{"glob":"/api/**","run":{"serviceId":"backend","region":"us-central1"}},{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-03-21T23:45:25.810663Z","createUser":{"email":"virgiliocalcagno@gmail.com"},"finalizeTime":"2026-03-21T23:45:30.222589Z","finalizeUser":{"email":"virgiliocalcagno@gmail.com"}}
+[debug] [2026-03-21T23:45:30.553Z] [hosting] finalized version for clearhost-c8919:[object Object]
+[info] +  hosting[clearhost-c8919]: version finalized 
+[info] i  hosting[clearhost-c8919]: releasing new version... 
+[debug] [2026-03-21T23:45:30.554Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:30.554Z] Checked if tokens are valid: true, expires at: 1774139186498
+[debug] [2026-03-21T23:45:30.554Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/channels/live/releases versionName=projects%2F986952569979%2Fsites%2Fclearhost-c8919%2Fversions%2Fbb4a976e2afc8d96
+[debug] [2026-03-21T23:45:30.554Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/channels/live/releases {}
+[debug] [2026-03-21T23:45:31.163Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/channels/live/releases 200
+[debug] [2026-03-21T23:45:31.163Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/clearhost-c8919/channels/live/releases {"name":"projects/986952569979/sites/clearhost-c8919/channels/live/releases/1774136730186000","version":{"name":"projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96","status":"FINALIZED","config":{"rewrites":[{"glob":"/api/**","run":{"serviceId":"backend","region":"us-central1"}},{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-03-21T23:45:25.810663Z","createUser":{"email":"virgiliocalcagno@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKBlm7eVa41MVMb4HIfPeiiCZhQSUnNXGAHLdBxYRqaTKaFXQ=mo"},"finalizeTime":"2026-03-21T23:45:30.222589Z","finalizeUser":{"email":"virgiliocalcagno@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKBlm7eVa41MVMb4HIfPeiiCZhQSUnNXGAHLdBxYRqaTKaFXQ=mo"}},"type":"DEPLOY","releaseTime":"2026-03-21T23:45:30.186Z","releaseUser":{"email":"virgiliocalcagno@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKBlm7eVa41MVMb4HIfPeiiCZhQSUnNXGAHLdBxYRqaTKaFXQ=mo"}}
+[debug] [2026-03-21T23:45:31.163Z] [hosting] release: {"name":"projects/986952569979/sites/clearhost-c8919/channels/live/releases/1774136730186000","version":{"name":"projects/986952569979/sites/clearhost-c8919/versions/bb4a976e2afc8d96","status":"FINALIZED","config":{"rewrites":[{"glob":"/api/**","run":{"serviceId":"backend","region":"us-central1"}},{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-03-21T23:45:25.810663Z","createUser":{"email":"virgiliocalcagno@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKBlm7eVa41MVMb4HIfPeiiCZhQSUnNXGAHLdBxYRqaTKaFXQ=mo"},"finalizeTime":"2026-03-21T23:45:30.222589Z","finalizeUser":{"email":"virgiliocalcagno@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKBlm7eVa41MVMb4HIfPeiiCZhQSUnNXGAHLdBxYRqaTKaFXQ=mo"}},"type":"DEPLOY","releaseTime":"2026-03-21T23:45:30.186Z","releaseUser":{"email":"virgiliocalcagno@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKBlm7eVa41MVMb4HIfPeiiCZhQSUnNXGAHLdBxYRqaTKaFXQ=mo"}}
+[info] +  hosting[clearhost-c8919]: release complete 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/clearhost-c8919/overview
+[info] Hosting URL: https://clearhost-c8919.web.app

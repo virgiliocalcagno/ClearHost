@@ -17,6 +17,7 @@ router = APIRouter(prefix="/propiedades", tags=["Propiedades"])
 async def listar_propiedades(
     activa: bool | None = None,
     ciudad: str | None = None,
+    propietario_id: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Listar todas las propiedades con filtros opcionales."""
@@ -25,6 +26,8 @@ async def listar_propiedades(
         query = query.where(Propiedad.activa == activa)
     if ciudad:
         query = query.where(Propiedad.ciudad.ilike(f"%{ciudad}%"))
+    if propietario_id:
+        query = query.where(Propiedad.propietario_id == propietario_id)
     query = query.order_by(Propiedad.nombre)
     result = await db.execute(query)
     return result.scalars().all()

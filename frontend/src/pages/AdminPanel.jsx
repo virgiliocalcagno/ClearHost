@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAuthenticated, getStoredStaff, logout } from '../services/api';
 import api from '../services/api';
@@ -14,10 +14,14 @@ const fetchIncidencias = () => api.get('/incidencias/').then(r => r.data);
 const crearPropiedad = (data) => api.post('/propiedades/', data).then(r => r.data);
 const actualizarPropiedad = (id, data) => api.put(`/propiedades/${id}`, data).then(r => r.data);
 const eliminarPropiedad = (id) => api.delete(`/propiedades/${id}`);
+const fetchPropietarios = () => api.get('/propietarios/').then(r => r.data);
 
 const crearReserva = (data) => api.post('/reservas/', data).then(r => r.data);
 const cancelarReserva = (id) => api.delete(`/reservas/${id}`);
 const reactivarReserva = (id) => api.put(`/reservas/${id}`, { estado: 'CONFIRMADA' });
+
+const crearPropietario = (data) => api.post('/propietarios/', data).then(r => r.data);
+const actualizarPropietario = (id, data) => api.put(`/propietarios/${id}`, data).then(r => r.data);
 
 const crearStaffMember = (data) => api.post('/staff/', data).then(r => r.data);
 const actualizarStaff = (id, data) => api.put(`/staff/${id}`, data).then(r => r.data);
@@ -39,6 +43,7 @@ const crearIncidencia = (data) => api.post('/incidencias/', data).then(r => r.da
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'propiedades', label: 'Propiedades', icon: '🏠' },
+  { id: 'propietarios', label: 'Propietarios', icon: '🤝' },
   { id: 'reservas', label: 'Reservas', icon: '📅' },
   { id: 'tareas', label: 'Tareas', icon: '🧹' },
   { id: 'mantenimiento', label: 'Mantenimiento', icon: '🔧' },
@@ -49,7 +54,14 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const staff = getStoredStaff();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [data, setData] = useState({ propiedades: [], reservas: [], tareas: [], staff: [], incidencias: [] });
+  const [data, setData] = useState({ 
+    propiedades: [], 
+    reservas: [], 
+    tareas: [], 
+    staff: [], 
+    incidencias: [],
+    propietarios: [] 
+  });
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState('');
@@ -69,10 +81,10 @@ export default function AdminPanel() {
   const loadAll = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [propiedades, reservas, tareas, staffList, incidencias] = await Promise.all([
-        fetchPropiedades(), fetchReservas(), fetchTareas(), fetchStaff(), fetchIncidencias()
+      const [propiedades, reservas, tareas, staffList, incidencias, propietarios] = await Promise.all([
+        fetchPropiedades(), fetchReservas(), fetchTareas(), fetchStaff(), fetchIncidencias(), fetchPropietarios()
       ]);
-      setData({ propiedades, reservas, tareas, staff: staffList, incidencias });
+      setData({ propiedades, reservas, tareas, staff: staffList, incidencias, propietarios });
     } catch (err) {
       console.error('Error cargando datos:', err);
     } finally {
@@ -132,7 +144,13 @@ export default function AdminPanel() {
       <main className="admin-main">
         {activeTab === 'dashboard' && <DashboardTab stats={stats} data={data} />}
         {activeTab === 'propiedades' && (
-          <PropiedadesTab data={data.propiedades} onAction={setModal} onRefresh={loadAll} showToast={showToast} />
+          <PropiedadesTab 
+            data={data.propiedades} 
+            propietarios={data.propietarios} 
+            onAction={setModal} 
+            onRefresh={loadAll} 
+            showToast={showToast} 
+          />
         )}
         {activeTab === 'reservas' && (
           <ReservasTab data={data.reservas} propiedades={data.propiedades} onAction={setModal} onRefresh={loadAll} showToast={showToast} />
@@ -143,6 +161,9 @@ export default function AdminPanel() {
 
         {activeTab === 'staff' && (
           <StaffTab data={data.staff} onAction={setModal} onRefresh={loadAll} showToast={showToast} />
+        )}
+        {activeTab === 'propietarios' && (
+          <PropietariosTab data={data.propietarios} propiedades={data.propiedades} onAction={setModal} onRefresh={loadAll} showToast={showToast} navigate={navigate} />
         )}
         {activeTab === 'mantenimiento' && (
           <MantenimientoTab 
@@ -164,6 +185,7 @@ export default function AdminPanel() {
           onRefresh={loadAll}
           showToast={showToast}
           propiedades={data.propiedades}
+          propietarios={data.propietarios}
         />
       )}
 
@@ -273,8 +295,13 @@ function DashboardTab({ stats, data }) {
 // ═══════════════════════════════════════════
 // Propiedades Tab
 // ═══════════════════════════════════════════
-function PropiedadesTab({ data, onAction, onRefresh, showToast }) {
+function PropiedadesTab({ data, propietarios, onAction, onRefresh, showToast }) {
   const [syncing, setSyncing] = useState(null);
+  const [ownerFilter, setOwnerFilter] = useState('');
+
+  const filteredProps = ownerFilter 
+    ? data.filter(p => p.propietario_id === ownerFilter)
+    : data;
 
   const handleSyncIcal = async (prop) => {
     setSyncing(prop.id);
@@ -297,6 +324,19 @@ function PropiedadesTab({ data, onAction, onRefresh, showToast }) {
           <div className="topbar-subtitle">Gestión de propiedades vacacionales</div>
         </div>
         <div className="topbar-actions">
+          <div className="filter-group" style={{ marginRight: '15px' }}>
+            <select 
+              className="select-field select-field-sm" 
+              value={ownerFilter} 
+              onChange={e => setOwnerFilter(e.target.value)}
+              style={{ minWidth: '180px' }}
+            >
+              <option value="">Todos los Propietarios</option>
+              {propietarios.map(prop => (
+                <option key={prop.id} value={prop.id}>{prop.nombre}</option>
+              ))}
+            </select>
+          </div>
           <button className="btn-admin btn-admin-primary" onClick={() => onAction({ type: 'propiedad' })}>
             ＋ Nueva Propiedad
           </button>
@@ -319,6 +359,7 @@ function PropiedadesTab({ data, onAction, onRefresh, showToast }) {
             <thead>
               <tr>
                 <th>Propiedad</th>
+                <th>Propietario</th>
                 <th>Ciudad</th>
                 <th>Habitaciones</th>
                 <th>Estado</th>
@@ -327,11 +368,14 @@ function PropiedadesTab({ data, onAction, onRefresh, showToast }) {
               </tr>
             </thead>
             <tbody>
-              {data.map(p => (
+              {filteredProps.map(p => (
                 <tr key={p.id}>
                   <td>
                     <div className="table-name">{p.nombre}</div>
                     <div className="table-sub">{p.direccion}</div>
+                  </td>
+                  <td>
+                    <div className="table-name">{p.propietario_nombre || '—'}</div>
                   </td>
                   <td>{p.ciudad}</td>
                   <td>{p.num_habitaciones}</td>
@@ -1109,7 +1153,7 @@ function FuenteBadge({ fuente }) {
 // ═══════════════════════════════════════════
 // Modal Form
 // ═══════════════════════════════════════════
-function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
+function ModalForm({ config, onClose, onRefresh, showToast, propiedades, propietarios }) {
   const isEdit = !!config.edit;
   const [form, setForm] = useState(config.edit || {});
   const [saving, setSaving] = useState(false);
@@ -1129,6 +1173,7 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
           ical_url: form.ical_url || null,
           hora_checkin: form.hora_checkin || '15:00',
           hora_checkout: form.hora_checkout || '11:00',
+          propietario_id: form.propietario_id || null,
         });
         showToast('Propiedad actualizada');
       } else if (config.type === 'propiedad') {
@@ -1140,6 +1185,7 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
           ical_url: form.ical_url || null,
           hora_checkin: form.hora_checkin || '15:00',
           hora_checkout: form.hora_checkout || '11:00',
+          propietario_id: form.propietario_id || null,
         });
         showToast('Propiedad creada exitosamente');
       } else if (config.type === 'reserva') {
@@ -1183,6 +1229,24 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
           urgente: !!form.urgente,
         });
         showToast('Incidencia reportada');
+      } else if (config.type === 'propietario' && isEdit) {
+        await actualizarPropietario(config.edit.id, {
+          nombre: form.nombre,
+          email: form.email || null,
+          telefono: form.telefono || null,
+          datos_bancarios: form.datos_bancarios || '',
+          notas: form.notas || '',
+        });
+        showToast('Propietario actualizado');
+      } else if (config.type === 'propietario') {
+        await crearPropietario({
+          nombre: form.nombre,
+          email: form.email || null,
+          telefono: form.telefono || null,
+          datos_bancarios: form.datos_bancarios || '',
+          notas: form.notas || '',
+        });
+        showToast('Propietario creado');
       }
       onRefresh();
       onClose();
@@ -1203,6 +1267,7 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
             {config.type === 'staff' && '👤 Nuevo Staff'}
             {config.type === 'staff-edit' && '✏️ Editar Staff'}
             {config.type === 'incidencia' && '🛠️ Nueva Incidencia / Reparación'}
+            {config.type === 'propietario' && (isEdit ? '🤝 Editar Propietario' : '🤝 Nuevo Propietario')}
           </h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
@@ -1211,6 +1276,16 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
             {/* Propiedad Form */}
             {config.type === 'propiedad' && (
               <>
+                <div className="input-group">
+                  <label>Propietario</label>
+                  <select className="select-field"
+                    value={form.propietario_id || ''} onChange={e => set('propietario_id', e.target.value)}>
+                    <option value="">Selecciona un propietario (Sin asignar)</option>
+                    {(propietarios || []).map(prop => (
+                      <option key={prop.id} value={prop.id}>{prop.nombre}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="input-group">
                   <label>Nombre de la propiedad</label>
                   <input className="input-field" required placeholder="Ej: Casa Playa Norte"
@@ -1430,6 +1505,38 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
                 </div>
               </>
             )}
+
+            {/* Propietario Form */}
+            {config.type === 'propietario' && (
+              <>
+                <div className="input-group">
+                  <label>Nombre del Propietario</label>
+                  <input className="input-field" required placeholder="Ej: Juan Pérez"
+                    value={form.nombre || ''} onChange={e => set('nombre', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Email</label>
+                  <input className="input-field" type="email" placeholder="email@ejemplo.com"
+                    value={form.email || ''} onChange={e => set('email', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Teléfono</label>
+                  <input className="input-field" placeholder="+52 ..."
+                    value={form.telefono || ''} onChange={e => set('telefono', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Datos Bancarios</label>
+                  <textarea className="input-field" style={{height: 60}}
+                    placeholder="CLABE, Banco, etc."
+                    value={form.datos_bancarios || ''} onChange={e => set('datos_bancarios', e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Notas</label>
+                  <textarea className="input-field" style={{height: 60}}
+                    value={form.notas || ''} onChange={e => set('notas', e.target.value)} />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="modal-footer">
@@ -1439,6 +1546,122 @@ function ModalForm({ config, onClose, onRefresh, showToast, propiedades }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// Propietarios Tab
+// ═══════════════════════════════════════════
+function PropietariosTab({ data, propiedades = [], onAction, onRefresh, showToast, navigate }) {
+  return (
+    <div className="admin-fade-in">
+      <div className="admin-topbar">
+        <div>
+          <h2>Propietarios</h2>
+          <div className="topbar-subtitle">Gestión de dueños de propiedades</div>
+        </div>
+        <div className="topbar-actions">
+          <button className="btn-admin btn-admin-primary" onClick={() => onAction({ type: 'propietario' })}>
+            ＋ Nuevo Propietario
+          </button>
+        </div>
+      </div>
+
+      {/* Banner informativo */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.08) 100%)',
+        border: '1px solid rgba(99,102,241,0.3)',
+        borderRadius: '12px',
+        padding: '14px 20px',
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        fontSize: '13px',
+        color: '#a5b4fc',
+      }}>
+        <span style={{ fontSize: '20px' }}>💡</span>
+        <span>Haz clic en <strong>"Ver Dashboard"</strong> para acceder al panel completo del propietario con sus propiedades, reservas, reparaciones, inventario y liquidación.</span>
+      </div>
+
+      <div className="admin-table-wrapper">
+        <div className="admin-table-header">
+          <h3>Listado de Propietarios</h3>
+          <span className="table-count">{data.length} registros</span>
+        </div>
+        {data.length === 0 ? (
+          <div className="admin-empty">
+            <div className="empty-icon">🤝</div>
+            <h4>Sin propietarios</h4>
+            <p>Agrega propietarios para vincularlos con las unidades.</p>
+          </div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Contacto</th>
+                <th>Propiedades</th>
+                <th>Datos Bancarios</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map(p => {
+                const propsDelOwner = propiedades ? propiedades.filter(pr => pr.propietario_id === p.id) : [];
+                return (
+                  <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/propietarios/${p.id}`)}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 700, fontSize: 15, color: 'white', flexShrink: 0,
+                        }}>
+                          {p.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="table-name">{p.nombre}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <div>{p.email || '—'}</div>
+                      <div className="table-sub">{p.telefono || ''}</div>
+                    </td>
+                    <td>
+                      <span className="admin-badge admin-badge-info">
+                        🏠 {propsDelOwner.length} propiedad{propsDelOwner.length !== 1 ? 'es' : ''}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="table-sub" style={{maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        {p.datos_bancarios || '—'}
+                      </div>
+                    </td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <div className="table-actions">
+                        <button
+                          className="btn-admin btn-admin-primary btn-admin-sm"
+                          onClick={() => navigate(`/admin/propietarios/${p.id}`)}
+                        >
+                          📊 Ver Dashboard
+                        </button>
+                        <button
+                          className="btn-admin btn-admin-outline btn-admin-sm"
+                          onClick={() => onAction({ type: 'propietario', edit: p })}
+                        >
+                          ✏️ Editar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

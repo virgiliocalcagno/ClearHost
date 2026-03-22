@@ -6,7 +6,7 @@ Ficha completa con datos de propietario, acceso, operación y plataformas.
 import uuid
 from datetime import datetime, time
 
-from sqlalchemy import String, Integer, Float, Boolean, Text, DateTime, JSON, Time
+from sqlalchemy import String, Integer, Float, Boolean, Text, DateTime, JSON, Time, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -17,6 +17,17 @@ class Propiedad(Base):
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+
+    # ── Relación con Propietario ──
+    # Una propiedad pertenece a un solo propietario
+    propietario_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("propietarios.id"), nullable=True, index=True
+    )
+    propietario: Mapped["Propietario"] = relationship(
+        "Propietario", 
+        back_populates="propiedades",
+        lazy="selectin"
     )
 
     # ── Datos básicos (visibles para staff) ──
@@ -121,6 +132,13 @@ class Propiedad(Base):
     # Relaciones
     reservas = relationship("Reserva", back_populates="propiedad", lazy="selectin")
     tareas = relationship("TareaLimpieza", back_populates="propiedad", lazy="selectin")
+
+    # Propiedades dinámicas
+    @property
+    def get_propietario_nombre(self) -> str | None:
+        if self.propietario:
+            return self.propietario.nombre
+        return self.propietario_nombre  # Usar el campo estático si no hay relación en DB aún
 
     def __repr__(self):
         return f"<Propiedad {self.nombre} ({self.ciudad})>"

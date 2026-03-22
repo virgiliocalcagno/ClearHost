@@ -124,4 +124,25 @@ export const actualizarStaff = async (staffId, data) => {
   return res.data;
 };
 
+// ========== PROPIETARIOS ==========
+export const getPropietarios = async () => {
+  const res = await api.get('/propietarios/');
+  return res.data;
+};
+
+export const crearPropietario = async (data) => {
+  const res = await api.post('/propietarios/', data);
+  return res.data;
+};
+
+export const actualizarPropietario = async (id, data) => {
+  const res = await api.put(`/propietarios/${id}`, data);
+  return res.data;
+};
+
+export const eliminarPropietario = async (id) => {
+  const res = await api.delete(`/propietarios/${id}`);
+  return res.data;
+};
+
 export default api;
