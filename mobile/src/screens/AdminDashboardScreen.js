@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { getTodasLasTareas } from '../services/api';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '../theme';
 
-export default function AdminDashboardScreen({ navigation }) {
+export default function AdminDashboardScreen({ navigation, route }) {
+    const { staff } = route?.params || { staff: { id: 'admin', nombre: 'Admin' } };
     const [tareas, setTareas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -49,8 +50,18 @@ export default function AdminDashboardScreen({ navigation }) {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} color={COLORS.primary} />}
             >
                 <View style={styles.header}>
-                    <Text style={styles.title}>Centro de Comando</Text>
-                    <Text style={styles.subtitle}>Supervisión en tiempo real</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View>
+                            <Text style={styles.title}>Centro de Comando</Text>
+                            <Text style={styles.subtitle}>Supervisión en tiempo real</Text>
+                        </View>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('MisGanancias', { staff })} 
+                            style={styles.headerWalletBtn}
+                        >
+                            <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Semáforo de Prioridades */}
@@ -153,5 +164,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center', 
         alignItems: 'center',
         ...SHADOWS.button 
+    },
+    headerWalletBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: COLORS.primaryLight,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

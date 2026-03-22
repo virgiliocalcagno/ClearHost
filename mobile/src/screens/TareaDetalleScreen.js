@@ -134,6 +134,19 @@ export default function TareaDetalleScreen({ navigation, route }) {
               </Text>
             </View>
           )}
+
+          {/* Ganancia por tarea (Muro de Privacidad) */}
+          <View style={styles.earningsCard}>
+            <View style={styles.earningsInfo}>
+              <Text style={styles.earningsLabel}>Pago por esta tarea</Text>
+              <Text style={styles.earningsValue}>
+                {tarea.pago_al_staff?.toLocaleString()} {tarea.moneda_tarea}
+              </Text>
+            </View>
+            <View style={styles.earningsIcon}>
+              <Ionicons name="cash-outline" size={24} color={COLORS.success} />
+            </View>
+          </View>
         </View>
 
         {/* Actions */}
@@ -447,5 +460,37 @@ const styles = StyleSheet.create({
   ctaText: {
     ...FONTS.button,
     fontSize: 17,
+  },
+  earningsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F0FDF4',
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginTop: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  earningsInfo: {
+    flex: 1,
+  },
+  earningsLabel: {
+    ...FONTS.small,
+    color: COLORS.success,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  earningsValue: {
+    ...FONTS.h3,
+    color: COLORS.success,
+  },
+  earningsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

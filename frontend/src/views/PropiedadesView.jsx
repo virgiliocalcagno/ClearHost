@@ -71,6 +71,7 @@ export default function PropiedadesView({ data, propietarios, onAction, onRefres
                 <th>Propietario</th>
                 <th>Ciudad</th>
                 <th>Habitaciones</th>
+                <th>Cobro / Pago</th>
                 <th>Estado</th>
                 <th>iCal</th>
                 <th>Acciones</th>
@@ -78,7 +79,7 @@ export default function PropiedadesView({ data, propietarios, onAction, onRefres
             </thead>
             <tbody>
               {filteredProps.map(p => (
-                <tr key(p.id)>
+                <tr key={p.id}>
                   <td>
                     <div className="table-name">{p.nombre}</div>
                     <div className="table-sub">{p.direccion}</div>
@@ -88,6 +89,10 @@ export default function PropiedadesView({ data, propietarios, onAction, onRefres
                   </td>
                   <td>{p.ciudad}</td>
                   <td>{p.num_habitaciones}</td>
+                  <td>
+                    <div style={{fontSize: '13px', fontWeight: '600', color: '#0EA5E9'}}>C: {p.cobro_propietario} {p.moneda_cobro}</div>
+                    <div style={{fontSize: '11px', color: '#10B981'}}>P: {p.pago_staff} {p.moneda_pago}</div>
+                  </td>
                   <td>
                     <span className={`admin-badge ${p.activa ? 'admin-badge-success' : 'admin-badge-error'}`}>
                       {p.activa ? '✓ Activa' : '✕ Inactiva'}
