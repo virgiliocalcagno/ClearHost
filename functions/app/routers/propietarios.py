@@ -13,7 +13,7 @@ from app.database import get_db
 from app.models.propietario import Propietario
 from app.models.propiedad import Propiedad
 from app.models.reserva import Reserva
-from app.models.tarea_limpieza import TareaOperativa
+from app.models.tarea_operativa import TareaOperativa
 from app.models.incidencia import Incidencia
 from app.models.inventario_articulo import InventarioArticulo
 from app.schemas.propietario import PropietarioCreate, PropietarioUpdate, PropietarioResponse

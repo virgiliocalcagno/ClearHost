@@ -20,10 +20,18 @@ async def seed():
 
     async with AsyncSession(engine) as session:
         async with session.begin():
-            # Limpiar datos previos (orden por FK)
-            await session.execute(delete(TareaOperativa))
-            await session.execute(delete(Reserva))
-            await session.execute(delete(Propiedad))
+            # Limpiar datos previos en orden de dependencias
+            from sqlalchemy import text
+            await session.execute(text("DELETE FROM adelantos_staff"))
+            await session.execute(text("DELETE FROM tareas_operativas"))
+            await session.execute(text("DELETE FROM tareas_limpieza"))
+            await session.execute(text("DELETE FROM incidencias"))
+            await session.execute(text("DELETE FROM gastos_operativos"))
+            await session.execute(text("DELETE FROM inventario_articulos"))
+            await session.execute(text("DELETE FROM reservas"))
+            await session.execute(text("DELETE FROM propiedades"))
+            # await session.execute(text("DELETE FROM propietarios"))
+            # No borramos propietarios ni zonas ni staff para no romper la config base
 
         # Obtener staff Maria
         async with session.begin():

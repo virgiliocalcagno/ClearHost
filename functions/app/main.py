@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db
@@ -73,6 +72,36 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Middleware para confiar en los headers de proxy (Firebase Hosting)
+@app.middleware("http")
+async def trust_proxy_headers(request, call_next):
+    """
+    Firebase Hosting envía X-Forwarded-Proto y X-Forwarded-Host.
+    Este middleware asegura que FastAPI genere URLs de redirección (ej. trailing slashes)
+    usando HTTPS y el dominio correcto del hosting.
+    """
+    # Confiar en el esquema (http/https)
+    proto = request.headers.get("x-forwarded-proto")
+    if proto:
+        request.scope["scheme"] = proto
+    
+    # Confiar en el host
+    host = request.headers.get("x-forwarded-host")
+    if host:
+        # Reemplazar el header de host en el scope para que Starlette lo use
+        new_headers = []
+        for name, value in request.scope["headers"]:
+            if name.lower() == b"host":
+                new_headers.append((b"host", host.encode()))
+            else:
+                new_headers.append((name, value))
+        request.scope["headers"] = new_headers
+
+    response = await call_next(request)
+    return response
+
+# Firebase Hosting ya maneja HTTPS termination
 
 # CORS — permitir conexiones desde frontend y app móvil
 app.add_middleware(

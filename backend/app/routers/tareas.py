@@ -34,14 +34,14 @@ async def listar_tareas(
     db: AsyncSession = Depends(get_db),
 ):
     """Listar tareas con filtros opcionales, enriquecidas con detalles."""
-    query = select(TareaLimpieza)
+    query = select(TareaOperativa)
     if fecha:
-        query = query.where(TareaLimpieza.fecha_programada == fecha)
+        query = query.where(TareaOperativa.fecha_programada == fecha)
     if estado:
-        query = query.where(TareaLimpieza.estado == estado)
+        query = query.where(TareaOperativa.estado == estado)
     if asignado_a:
-        query = query.where(TareaLimpieza.asignado_a == asignado_a)
-    query = query.order_by(TareaLimpieza.fecha_programada, TareaLimpieza.hora_inicio)
+        query = query.where(TareaOperativa.asignado_a == asignado_a)
+    query = query.order_by(TareaOperativa.fecha_programada, TareaOperativa.hora_inicio)
     result = await db.execute(query)
     tareas = result.scalars().all()
 
@@ -70,10 +70,10 @@ async def tareas_de_hoy(
     """Obtener tareas del día actual para un miembro del staff (pantalla principal app)."""
     hoy = date.today()
     result = await db.execute(
-        select(TareaLimpieza).where(
-            TareaLimpieza.asignado_a == staff_id,
-            TareaLimpieza.fecha_programada == hoy,
-        ).order_by(TareaLimpieza.hora_inicio)
+        select(TareaOperativa).where(
+            TareaOperativa.asignado_a == staff_id,
+            TareaOperativa.fecha_programada == hoy,
+        ).order_by(TareaOperativa.hora_inicio)
     )
     tareas = result.scalars().all()
 
@@ -100,7 +100,7 @@ async def obtener_tarea(
 ):
     """Obtener detalle completo de una tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -123,7 +123,7 @@ async def crear_tarea(
     db: AsyncSession = Depends(get_db),
 ):
     """Crear una tarea de limpieza manualmente."""
-    tarea = TareaLimpieza(**data.model_dump())
+    tarea = TareaOperativa(**data.model_dump())
     db.add(tarea)
     await db.flush()
     await db.refresh(tarea)
@@ -138,7 +138,7 @@ async def actualizar_tarea(
 ):
     """Actualizar información general de una tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -161,7 +161,7 @@ async def actualizar_checklist(
 ):
     """Actualizar el checklist digital de la tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -186,7 +186,7 @@ async def actualizar_auditoria(
 ):
     """Actualizar la auditoría de activos de la tarea."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -210,7 +210,7 @@ async def subir_foto(
         raise HTTPException(status_code=400, detail="tipo debe ser 'antes' o 'despues'")
 
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -257,7 +257,7 @@ async def completar_tarea(
     Dispara notificación push al admin.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -321,7 +321,7 @@ async def asignar_tarea(
     Si staff_id es None, desasigna la tarea.
     """
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:
@@ -367,9 +367,9 @@ async def auto_asignar_tareas(
     from app.services.task_automation import obtener_staff_disponible
 
     result = await db.execute(
-        select(TareaLimpieza).where(
-            TareaLimpieza.asignado_a == None,
-            TareaLimpieza.estado.in_([EstadoTarea.PENDIENTE, EstadoTarea.EN_PROGRESO]),
+        select(TareaOperativa).where(
+            TareaOperativa.asignado_a == None,
+            TareaOperativa.estado.in_([EstadoTarea.PENDIENTE, EstadoTarea.EN_PROGRESO]),
         )
     )
     tareas_sin_asignar = result.scalars().all()
@@ -397,7 +397,7 @@ async def verificar_tarea(
 ):
     """Admin verifica y aprueba la tarea completada."""
     result = await db.execute(
-        select(TareaLimpieza).where(TareaLimpieza.id == tarea_id)
+        select(TareaOperativa).where(TareaOperativa.id == tarea_id)
     )
     tarea = result.scalar_one_or_none()
     if not tarea:

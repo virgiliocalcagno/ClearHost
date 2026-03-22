@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.tarea_limpieza import TareaOperativa
+from app.models.tarea_operativa import TareaOperativa
 from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.models.propiedad import Propiedad
 from app.database import AsyncSessionLocal

@@ -13,14 +13,17 @@ from jose import jwt
 
 from app.database import get_db
 from app.config import get_settings
-from app.models.tarea_limpieza import TareaOperativa, EstadoTarea
+from app.models.tarea_operativa import TareaOperativa, EstadoTarea
 from app.models.adelanto_staff import AdelantoStaff
+from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.schemas.usuario_staff import (
     StaffCreate, StaffUpdate, StaffResponse,
     StaffLogin, TokenResponse, FCMTokenUpdate,
     ForgotPasswordRequest, ResetPasswordRequest,
     AdelantoCreate, AdelantoResponse, BilleteraResponse
 )
+
+router = APIRouter(prefix="/staff", tags=["Staff"])
 
 
 @router.get("/{staff_id}/billetera", response_model=BilleteraResponse)

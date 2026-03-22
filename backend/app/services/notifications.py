@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.tarea_limpieza import TareaLimpieza
+from app.models.tarea_operativa import TareaOperativa
 from app.models.usuario_staff import UsuarioStaff, RolStaff
 from app.models.propiedad import Propiedad
 from app.database import AsyncSessionLocal
@@ -23,27 +23,39 @@ _firebase_initialized = False
 def _init_firebase():
     """Inicializa Firebase Admin SDK si no está inicializado."""
     global _firebase_initialized
+    
+    import firebase_admin
+    from firebase_admin import credentials
+    from app.config import get_settings
+    import os
+
+    # Verificar si ya existe una app inicializada por otro módulo (ej. main.py)
+    if firebase_admin._apps:
+        _firebase_initialized = True
+        return
+
     if _firebase_initialized:
         return
 
     try:
-        import firebase_admin
-        from firebase_admin import credentials
-        from app.config import get_settings
-
         settings = get_settings()
-        import os
-        if os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
-            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-            firebase_admin.initialize_app(cred)
+        
+        # En Cloud Functions de Firebase, inicializar sin argumentos 
+        if "FIREBASE_CONFIG" in os.environ or "K_SERVICE" in os.environ:
+            firebase_admin.initialize_app(options={
+                "storageBucket": settings.FB_STORAGE_BUCKET
+            })
             _firebase_initialized = True
-            logger.info("Firebase Admin SDK inicializado correctamente")
-        else:
-            logger.warning(
-                f"Archivo de credenciales Firebase no encontrado: "
-                f"{settings.FIREBASE_CREDENTIALS_PATH}. "
-                f"Push notifications deshabilitadas."
-            )
+            logger.info("Firebase Admin SDK inicializado")
+            return
+
+        if settings.SERVICE_ACCOUNT_PATH and os.path.exists(settings.SERVICE_ACCOUNT_PATH):
+            cred = credentials.Certificate(settings.SERVICE_ACCOUNT_PATH)
+            firebase_admin.initialize_app(cred, options={
+                "storageBucket": settings.FB_STORAGE_BUCKET
+            })
+            _firebase_initialized = True
+            logger.info(f"Firebase Admin SDK inicializado desde archivo: {settings.SERVICE_ACCOUNT_PATH}")
     except Exception as e:
         logger.error(f"Error inicializando Firebase: {e}")
 
@@ -75,32 +87,26 @@ async def send_push_notification(fcm_token: str, title: str, body: str, data: di
         return False
 
 
-async def notificar_tarea_completada(tarea: TareaLimpieza, db: AsyncSession):
-    """
-    Notifica a TODOS los admins cuando un empleado marca una propiedad como 'Clean & Ready'.
-    Permite autorizar el siguiente check-in.
-    """
-    # Obtener todos los admins con FCM token
+async def notificar_tarea_completada(tarea: TareaOperativa, db: AsyncSession):
+    """Notifica a admins cuando una propiedad está lista."""
+    zona_id = tarea.propiedad.zona_id if tarea.propiedad else None
+
     result = await db.execute(
         select(UsuarioStaff).where(
-            UsuarioStaff.rol == RolStaff.ADMIN,
-            UsuarioStaff.fcm_token.isnot(None),
+            (UsuarioStaff.fcm_token.isnot(None)) &
+            (
+                (UsuarioStaff.rol == RolStaff.SUPER_ADMIN) |
+                ((UsuarioStaff.rol == RolStaff.MANAGER_LOCAL) & (UsuarioStaff.zona_id == zona_id))
+            )
         )
     )
     admins = result.scalars().all()
 
-    # Obtener nombre de la propiedad
-    prop_nombre = "Propiedad"
-    if tarea.propiedad:
-        prop_nombre = tarea.propiedad.nombre
-
-    # Obtener nombre del staff que completó
-    staff_nombre = "Staff"
-    if tarea.asignado:
-        staff_nombre = tarea.asignado.nombre
+    prop_nombre = tarea.propiedad.nombre if tarea.propiedad else "Propiedad"
+    staff_nombre = tarea.asignado.nombre if tarea.asignado else "Staff"
 
     title = "🏠 ¡Propiedad Lista!"
-    body = f"{prop_nombre} marcada como 'Clean & Ready' por {staff_nombre}. Puedes autorizar el check-in."
+    body = f"{prop_nombre} marcada como 'Clean & Ready' por {staff_nombre}."
 
     data = {
         "type": "TAREA_COMPLETADA",
@@ -111,19 +117,14 @@ async def notificar_tarea_completada(tarea: TareaLimpieza, db: AsyncSession):
     for admin in admins:
         await send_push_notification(admin.fcm_token, title, body, data)
 
-    logger.info(f"Notificación 'Clean & Ready' enviada a {len(admins)} admin(s)")
 
-
-async def notificar_nueva_tarea(tarea: TareaLimpieza, staff: UsuarioStaff, propiedad: Propiedad):
+async def notificar_nueva_tarea(tarea: TareaOperativa, staff: UsuarioStaff, propiedad: Propiedad):
     """Notifica al staff cuando se le asigna una nueva tarea."""
     if not staff.fcm_token:
         return
 
     title = "📋 Nueva Tarea Asignada"
-    body = (
-        f"Limpieza en {propiedad.nombre} programada para el {tarea.fecha_programada}. "
-        f"{'⚠️ Incluye lavado de ropa.' if tarea.requiere_lavado_ropa else ''}"
-    )
+    body = f"Limpieza en {propiedad.nombre} para el {tarea.fecha_programada}."
     data = {
         "type": "NUEVA_TAREA",
         "tarea_id": str(tarea.id),
@@ -134,30 +135,22 @@ async def notificar_nueva_tarea(tarea: TareaLimpieza, staff: UsuarioStaff, propi
 
 
 async def enviar_recordatorios_manana():
-    """
-    Cron Job diario — Envía recordatorios al staff sobre las unidades
-    que deben preparar al día siguiente, incluyendo lavado de ropa.
-    """
+    """Cron Job diario — Recordatorios al staff."""
     from datetime import date, timedelta
-
     manana = date.today() + timedelta(days=1)
 
     async with AsyncSessionLocal() as db:
-        # Obtener tareas de mañana
         result = await db.execute(
-            select(TareaLimpieza).where(
-                TareaLimpieza.fecha_programada == manana,
-                TareaLimpieza.estado.in_(["PENDIENTE", "EN_PROGRESO"]),
-                TareaLimpieza.asignado_a.isnot(None),
+            select(TareaOperativa).where(
+                TareaOperativa.fecha_programada == manana,
+                TareaOperativa.estado.in_(["PENDIENTE", "EN_PROGRESO"]),
+                TareaOperativa.asignado_a.isnot(None),
             )
         )
         tareas = result.scalars().all()
 
-        if not tareas:
-            logger.info("No hay tareas para mañana")
-            return
+        if not tareas: return
 
-        # Agrupar por staff
         tareas_por_staff = {}
         for tarea in tareas:
             staff_id = tarea.asignado_a
@@ -166,72 +159,40 @@ async def enviar_recordatorios_manana():
             tareas_por_staff[staff_id].append(tarea)
 
         for staff_id, staff_tareas in tareas_por_staff.items():
-            # Obtener staff
-            staff_result = await db.execute(
-                select(UsuarioStaff).where(UsuarioStaff.id == staff_id)
-            )
+            staff_result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.id == staff_id))
             staff = staff_result.scalar_one_or_none()
-            if not staff or not staff.fcm_token:
-                continue
+            if not staff or not staff.fcm_token: continue
 
-            num_tareas = len(staff_tareas)
-            con_lavado = sum(1 for t in staff_tareas if t.requiere_lavado_ropa)
-
-            title = f"📅 Mañana tienes {num_tareas} tarea(s)"
-            body = f"Prepárate para mañana {manana.strftime('%d/%m')}."
-            if con_lavado > 0:
-                body += f" 🧺 {con_lavado} requieren lavado de ropa (sábanas/toallas)."
-
-            data = {
-                "type": "RECORDATORIO_MANANA",
-                "fecha": str(manana),
-                "num_tareas": str(num_tareas),
-            }
-
-            await send_push_notification(staff.fcm_token, title, body, data)
-
-        logger.info(f"Recordatorios enviados a {len(tareas_por_staff)} staff(s)")
+            await send_push_notification(staff.fcm_token, f"📅 Mañana tienes {len(staff_tareas)} tarea(s)", f"Prepárate para mañana {manana.strftime('%d/%m')}.", {"type": "RECORDATORIO_MANANA"})
 
 
 async def alertar_admins_tareas_pendientes():
-    """
-    Cron Job diario — Alerta a admins sobre tareas pendientes del día.
-    Se ejecuta temprano para que puedan tomar acción.
-    """
+    """Cron Job diario — Alerta a admins sobre tareas pendientes."""
     from datetime import date
-
     hoy = date.today()
 
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(TareaLimpieza).where(
-                TareaLimpieza.fecha_programada == hoy,
-                TareaLimpieza.estado == "PENDIENTE",
-            )
-        )
+        result = await db.execute(select(TareaOperativa).where(TareaOperativa.fecha_programada == hoy, TareaOperativa.estado == "PENDIENTE"))
         tareas_pendientes = result.scalars().all()
-
-        if not tareas_pendientes:
-            return
+        if not tareas_pendientes: return
 
         sin_asignar = sum(1 for t in tareas_pendientes if t.asignado_a is None)
-
-        # Notificar admins
-        admin_result = await db.execute(
-            select(UsuarioStaff).where(
-                UsuarioStaff.rol == RolStaff.ADMIN,
-                UsuarioStaff.fcm_token.isnot(None),
-            )
-        )
+        admin_result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.rol == RolStaff.SUPER_ADMIN, UsuarioStaff.fcm_token.isnot(None)))
         admins = admin_result.scalars().all()
 
         title = f"⚠️ {len(tareas_pendientes)} tareas pendientes hoy"
         body = f"Hay {len(tareas_pendientes)} propiedades por limpiar hoy."
-        if sin_asignar > 0:
-            body += f" 🚨 {sin_asignar} SIN ASIGNAR."
+        if sin_asignar > 0: body += f" 🚨 {sin_asignar} SIN ASIGNAR."
 
         for admin in admins:
-            await send_push_notification(admin.fcm_token, title, body, {
-                "type": "ALERTA_PENDIENTES",
-                "num_pendientes": str(len(tareas_pendientes)),
-            })
+            await send_push_notification(admin.fcm_token, title, body, {"type": "ALERTA_PENDIENTES"})
+
+
+async def notificar_alerta_inventario(item, db: AsyncSession):
+    """Notifica a admins sobre stock bajo."""
+    zona_id = getattr(item, 'zona_id', None)
+    result = await db.execute(select(UsuarioStaff).where((UsuarioStaff.fcm_token.isnot(None)) & ((UsuarioStaff.rol == RolStaff.SUPER_ADMIN) | ((UsuarioStaff.rol == RolStaff.MANAGER_LOCAL) & (UsuarioStaff.zona_id == zona_id) if zona_id else False))))
+    admins = result.scalars().all()
+
+    for admin in admins:
+        await send_push_notification(admin.fcm_token, "📉 Stock Bajo", f"El artículo '{item.articulo}' está bajo ({item.stock_actual}/{item.stock_minimo}).", {"type": "ALERTA_INVENTARIO"})

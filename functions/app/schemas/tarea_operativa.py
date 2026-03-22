@@ -5,7 +5,7 @@ Schemas Pydantic para TareaOperativa.
 from datetime import datetime, date, time
 from typing import Optional, Any
 from pydantic import BaseModel
-from app.models.tarea_limpieza import EstadoTarea, PrioridadTarea
+from app.models.tarea_operativa import EstadoTarea, PrioridadTarea
 
 class ChecklistItem(BaseModel):
     item: str

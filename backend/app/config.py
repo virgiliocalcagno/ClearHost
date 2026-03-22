@@ -23,6 +23,25 @@ class Settings(BaseSettings):
     APP_NAME: str = "ClearHost PMS"
     DEBUG: bool = True
 
+    @classmethod
+    def validate_debug(cls, v):
+        if isinstance(v, str):
+            if v.lower() in ('true', '1', 'yes'):
+                return True
+            if v.lower() in ('false', '0', 'no', 'release', 'production'):
+                return False
+        return v
+
+    from pydantic import field_validator
+    @field_validator("DEBUG", mode="before")
+    def parse_debug(cls, v):
+        if isinstance(v, str):
+            if v.lower() in ('true', '1', 'yes'):
+                return True
+            if v.lower() in ('false', '0', 'no', 'release', 'production'):
+                return False
+        return v
+
     # iCal Sync
     ICAL_SYNC_INTERVAL_MINUTES: int = 30
     ICAL_REQUEST_TIMEOUT: int = 30  # Timeout HTTP en segundos

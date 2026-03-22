@@ -22,7 +22,7 @@ async def create_user():
                 email="maria@clearhost.com",
                 password_hash=hashed,
                 telefono="+52 55 1234 5678",
-                rol=RolStaff.LIMPIEZA,
+                rol=RolStaff.STAFF,
             )
             session.add(user)
     

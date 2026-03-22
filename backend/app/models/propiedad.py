@@ -4,9 +4,9 @@ Ficha completa con datos de propietario, acceso, operación y plataformas.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
-from sqlalchemy import String, Integer, Float, Boolean, Text, DateTime, JSON
+from sqlalchemy import String, Integer, Float, Boolean, Text, DateTime, JSON, Time, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,6 +18,29 @@ class Propiedad(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
+
+    # ── Relación con Propietario ──
+    # Una propiedad pertenece a un solo propietario
+    propietario_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("propietarios.id"), nullable=True, index=True
+    )
+    propietario: Mapped["Propietario"] = relationship(
+        "Propietario", 
+        back_populates="propiedades",
+        lazy="selectin"
+    )
+
+    # ── Operación y Supervisión ──
+    # Zona geográfica o administrativa — FK a tabla zonas
+    zona_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("zonas.id"), nullable=True, index=True
+    )
+    zona: Mapped["Zona | None"] = relationship("Zona", back_populates="propiedades", lazy="selectin")
+    # Manager local responsable de esta unidad
+    manager_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("usuarios_staff.id"), nullable=True, index=True
+    )
+
 
     # ── Datos básicos (visibles para staff) ──
     nombre: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -53,6 +76,8 @@ class Propiedad(Base):
     num_banos: Mapped[int | None] = mapped_column(Integer, nullable=True, default=1)
     max_huespedes: Mapped[int | None] = mapped_column(Integer, nullable=True, default=2)
     metros_cuadrados: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hora_checkout: Mapped[time | None] = mapped_column(Time, nullable=True)
+    hora_checkin: Mapped[time | None] = mapped_column(Time, nullable=True)
     amenidades: Mapped[dict | None] = mapped_column(
         JSON, nullable=True,
         comment="Lista de amenidades: piscina, AC, parking, etc."
@@ -62,8 +87,16 @@ class Propiedad(Base):
     tiene_estacionamiento: Mapped[bool] = mapped_column(Boolean, default=False)
     detalles_estacionamiento: Mapped[str | None] = mapped_column(String(500), nullable=True, comment="Ubicación del cajón, número, etc.")
 
-    # ── Información operativa ──
-    tarifa_limpieza: Mapped[float | None] = mapped_column(Float, nullable=True, comment="Costo de limpieza por turno")
+    # ── Información operativa y financiera (Doble Tarifario) ──
+    # Lo que se cobra al propietario por la limpieza/operación
+    cobro_propietario: Mapped[float | None] = mapped_column(Float, default=0.0, comment="Cobro al dueño")
+    moneda_cobro: Mapped[str | None] = mapped_column(String(10), default="MXN")
+    
+    # Lo que se paga al staff por la operación de esta unidad
+    pago_staff: Mapped[float | None] = mapped_column(Float, default=0.0, comment="Pago al staff")
+    moneda_pago: Mapped[str | None] = mapped_column(String(10), default="MXN")
+
+    tarifa_limpieza: Mapped[float | None] = mapped_column(Float, nullable=True, comment="Costo de limpieza base (Deprecado)")
     contacto_emergencia: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Nombre y teléfono de contacto de emergencia")
     contacto_mantenimiento: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Plomero, electricista, etc.")
     dia_basura: Mapped[str | None] = mapped_column(String(100), nullable=True, comment="Días que pasa el camión de basura")
@@ -118,7 +151,14 @@ class Propiedad(Base):
 
     # Relaciones
     reservas = relationship("Reserva", back_populates="propiedad", lazy="selectin")
-    tareas = relationship("TareaLimpieza", back_populates="propiedad", lazy="selectin")
+    tareas = relationship("TareaOperativa", back_populates="propiedad", lazy="selectin")
+
+    # Propiedades dinámicas
+    @property
+    def get_propietario_nombre(self) -> str | None:
+        if self.propietario:
+            return self.propietario.nombre
+        return self.propietario_nombre  # Usar el campo estático si no hay relación en DB aún
 
     def __repr__(self):
         return f"<Propiedad {self.nombre} ({self.ciudad})>"

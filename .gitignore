@@ -4,3 +4,41 @@ node_modules/
 *serviceAccountKey.json
 Proyecto_ZONA_ENCARAMAO/serviceAccountKey.json
 *firebase-credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+*.log
+firebase-debug.log*
+.firebase/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+tmp/
+local_manager_audit_report.md
+system_state_report.md
+backend_errors.txt
