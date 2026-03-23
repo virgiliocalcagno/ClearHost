@@ -1,6 +1,6 @@
 export function EstadoBadge({ estado }) {
   const map = {
-    PENDIENTE: { cls: 'admin-badge-warning', txt: '⏳ En Bolsa' },
+    PENDIENTE: { cls: 'admin-badge-warning', txt: '⏳ Disponible' },
     ASIGNADA_NO_CONFIRMADA: { cls: 'admin-badge-warning', txt: '🔔 Por Confirmar' },
     ACEPTADA: { cls: 'admin-badge-success', txt: '✅ Confirmada' },
     EN_PROGRESO: { cls: 'admin-badge-info', txt: '▶ En Progreso' },
@@ -8,7 +8,7 @@ export function EstadoBadge({ estado }) {
     COMPLETADA: { cls: 'admin-badge-success', txt: '✓ Completada' },
     VERIFICADA: { cls: 'admin-badge-purple', txt: '✦ Verificada' },
   };
-  const s = map[estado] || map.PENDIENTE;
+  const s = map[estado?.toUpperCase()] || map.PENDIENTE;
   return <span className={`admin-badge ${s.cls}`}>{s.txt}</span>;
 }
 
@@ -18,7 +18,7 @@ export function EstadoReservaBadge({ estado }) {
     CANCELADA: { cls: 'admin-badge-error', txt: '✕ Cancelada' },
     COMPLETADA: { cls: 'admin-badge-neutral', txt: '✓ Completada' },
   };
-  const s = map[estado] || map.CONFIRMADA;
+  const s = map[estado?.toUpperCase()] || map.CONFIRMADA;
   return <span className={`admin-badge ${s.cls}`}>{s.txt}</span>;
 }
 
@@ -30,7 +30,7 @@ export function FuenteBadge({ fuente }) {
     MANUAL: { cls: 'admin-badge-neutral', txt: 'Manual' },
     OTRO: { cls: 'admin-badge-neutral', txt: 'Otro' },
   };
-  const s = map[fuente] || map.MANUAL;
+  const s = map[fuente?.toUpperCase()] || map.MANUAL;
   return <span className={`admin-badge ${s.cls}`}>{s.txt}</span>;
 }
 
@@ -43,6 +43,6 @@ export function EstadoIncidenciaBadge({ estado }) {
     COMPLETADO: { cls: 'admin-badge-purple', txt: 'Reparado / Terminado' },
     PAGADO: { cls: 'admin-badge-success', txt: 'Pagado' },
   };
-  const s = map[estado] || map.PENDIENTE;
+  const s = map[estado?.toUpperCase()] || map.PENDIENTE;
   return <span className={`admin-badge ${s.cls}`}>{s.txt}</span>;
 }

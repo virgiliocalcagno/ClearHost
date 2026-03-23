@@ -6,7 +6,7 @@ import uuid
 import enum
 from datetime import datetime
 
-from sqlalchemy import String, Boolean, DateTime, Enum as SQLEnum, ForeignKey
+from sqlalchemy import String, Boolean, DateTime, Enum as SQLEnum, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -29,6 +29,10 @@ class UsuarioStaff(Base):
     documento: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, default="000")
     email: Mapped[str | None] = mapped_column(String(300), unique=True, nullable=True)
     telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    telefono_emergencia: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    direccion: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    referencias: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
+    
     password_hash: Mapped[str] = mapped_column(String(500), nullable=False)
 
     rol: Mapped[RolStaff] = mapped_column(

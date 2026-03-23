@@ -5,13 +5,13 @@
 .td-address { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
 .td-info-grid {
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
   padding-top: 14px;
   border-top: 1px solid var(--divider);
 }
 .td-info-item { display: flex; flex-direction: column; gap: 2px; }
-.td-info-label { font-size: 12px; color: var(--text-tertiary); }
-.td-info-value { font-size: 14px; font-weight: 600; }
+.td-info-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+.td-info-value { font-size: 15px; font-weight: 700; }
 
 /* Actions */
 .td-actions { display: flex; flex-direction: column; gap: 10px; }

@@ -20,12 +20,14 @@ class AuditoriaActivo(BaseModel):
     notas: Optional[str] = None
 
 class TareaCreate(BaseModel):
-    reserva_id: Any
+    reserva_id: Optional[Any] = None
     propiedad_id: Any
     tipo_tarea: str = "LIMPIEZA"  # LIMPIEZA, MANTENIMIENTO, DILIGENCIA
     asignado_a: Optional[Any] = None
     fecha_programada: date
     hora_inicio: Optional[time] = None
+    estado: str = "PENDIENTE"
+    notas_staff: Optional[str] = None
     checklist: Optional[list[ChecklistItem]] = None
     auditoria_activos: Optional[list[AuditoriaActivo]] = None
     requiere_lavado_ropa: bool = True
@@ -64,12 +66,15 @@ class TareaResponse(BaseModel):
     hora_inicio: Optional[time] = None
     estado: EstadoTarea
     prioridad: PrioridadTarea
+    id_secuencial: Optional[int] = None
     fecha_asignacion: Optional[datetime] = None
     checklist: Optional[list] = None
     auditoria_activos: Optional[list] = None
     fotos_antes: Optional[list] = None
     fotos_despues: Optional[list] = None
     requiere_lavado_ropa: bool
+    liquidada: bool = False
+    progreso: float = 0.0
     notas_staff: Optional[str] = None
     pago_al_staff: float
     moneda_tarea: str
@@ -86,5 +91,6 @@ class TareaConDetalles(TareaResponse):
     direccion_propiedad: Optional[str] = None
     nombre_huesped: Optional[str] = None
     nombre_asignado: Optional[str] = None
+    fuente_reserva: Optional[str] = None
     check_in: Optional[date] = None
     check_out: Optional[date] = None

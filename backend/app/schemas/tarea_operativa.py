@@ -64,6 +64,7 @@ class TareaResponse(BaseModel):
     hora_inicio: Optional[time] = None
     estado: EstadoTarea
     prioridad: PrioridadTarea
+    id_secuencial: Optional[int] = None
     fecha_asignacion: Optional[datetime] = None
     checklist: Optional[list] = None
     auditoria_activos: Optional[list] = None

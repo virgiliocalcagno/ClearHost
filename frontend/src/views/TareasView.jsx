@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
-import api from '../services/api';
+import api, { 
+  verificarTarea, 
+  asignarTarea, 
+  generarLinkWhatsApp 
+} from '../services/api';
 import { EstadoBadge } from '../components/AdminCommon';
 import AdminWeeklyCalendar from '../components/AdminWeeklyCalendar';
 
-const verificarTarea = (id) => api.put(`/tareas/${id}/verificar`).then(r => r.data);
-const asignarTarea = (id, staffId, horaInicio) => {
-  const params = {};
-  if (staffId) params.staff_id = staffId;
-  if (horaInicio) params.hora_inicio = horaInicio;
-  return api.put(`/tareas/${id}/asignar`, null, { params }).then(r => r.data);
-};
-const generarLinkWhatsApp = (id) => api.get(`/tareas/${id}/whatsapp-link`).then(r => r.data);
-
-export default function TareasView({ data, propiedades, staffList, onRefresh, showToast }) {
+export default function TareasView({ data, propiedades, staffList, onAction, onRefresh, showToast }) {
   const [assigning, setAssigning] = useState(null);
   const [evidencia, setEvidencia] = useState(null); // tarea seleccionada para ver evidencia
-  const [vista, setVista] = useState('tabla'); // 'tabla' o 'calendario'
+  const [vista, setVista] = useState('calendario4d'); // 'calendario4d', 'calendario7d' o 'tabla'
 
   const handleWhatsApp = async (id) => {
     try {
@@ -67,6 +62,21 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
     handleAsignar(tareaId, currentStaffId, hora);
   };
 
+  const handleEdit = (tarea) => {
+    onAction({ type: 'tarea', edit: tarea });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar esta tarea?")) return;
+    try {
+      await api.delete(`/tareas/${id}`);
+      showToast('Tarea eliminada');
+      onRefresh();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Error al eliminar tarea');
+    }
+  };
+
   return (
     <div className="admin-fade-in">
       <div className="admin-topbar">
@@ -77,8 +87,12 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
         <div className="topbar-actions">
           <div className="view-toggle" style={{display: 'inline-flex', gap: 5, marginRight: 15, background: 'var(--surface)', padding: 4, borderRadius: 8}}>
             <button className={`btn-admin btn-admin-sm ${vista === 'tabla' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('tabla')} style={{border: 'none'}}>📋 Tabla</button>
-            <button className={`btn-admin btn-admin-sm ${vista === 'calendario' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario')} style={{border: 'none'}}>📅 Semáforo Semanal</button>
+            <button className={`btn-admin btn-admin-sm ${vista === 'calendario' || vista === 'calendario4d' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario4d')} style={{border: 'none'}}>⚡ Operativa (4D)</button>
+            <button className={`btn-admin btn-admin-sm ${vista === 'calendario7d' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario7d')} style={{border: 'none'}}>📅 Semanal (7D)</button>
           </div>
+          <button className="btn-admin btn-admin-primary" style={{marginRight: 10}} onClick={() => onAction({ type: 'tarea' })}>
+            ＋ Nueva Tarea
+          </button>
           <button className="btn-admin btn-admin-outline" onClick={onRefresh}>🔄 Actualizar</button>
         </div>
       </div>
@@ -98,6 +112,7 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
           <table className="admin-table">
             <thead>
               <tr>
+                <th># ID</th>
                 <th>Propiedad</th>
                 <th>Huésped</th>
                 <th>Fecha</th>
@@ -113,6 +128,11 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
                 const checkDone = checkItems.filter(i => i.completado).length;
                 return (
                   <tr key={t.id}>
+                    <td>
+                      <div className="admin-badge admin-badge-neutral" style={{fontWeight: 800}}>
+                        T-{t.id_secuencial || '—'}
+                      </div>
+                    </td>
                     <td>
                       <div className="table-name">{getPropName(t)}</div>
                     </td>
@@ -183,6 +203,16 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
                             ✓ Verificar
                           </button>
                         )}
+                        {['PENDIENTE', 'ASIGNADA_NO_CONFIRMADA'].includes(t.estado) && (
+                          <button
+                            className="btn-admin btn-admin-outline btn-admin-sm"
+                            style={{color: '#EF4444', borderColor: '#EF4444'}}
+                            onClick={() => handleDelete(t.id)}
+                            title="Eliminar tarea"
+                          >
+                            🗑
+                          </button>
+                        )}
                         <button
                           className="btn-admin btn-admin-sm"
                           style={{background:'#25D366', color:'white', border:'none', marginLeft:5}}
@@ -207,6 +237,9 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
             handleTimeChange={handleTimeChange}
             staffLimpieza={staffLimpieza}
             handleWhatsApp={handleWhatsApp}
+            handleDelete={handleDelete}
+            handleEdit={handleEdit}
+            numDays={vista === 'calendario7d' ? 7 : 4}
           />
         )}
       </div>
@@ -216,7 +249,7 @@ export default function TareasView({ data, propiedades, staffList, onRefresh, sh
         <div className="modal-overlay" onClick={() => setEvidencia(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{maxWidth:700, maxHeight:'90vh', overflow:'auto'}}>
             <div className="modal-header">
-              <h3>📋 Evidencia: {getPropName(evidencia)}</h3>
+              <h3>📋 Evidencia T-{evidencia.id_secuencial}: {getPropName(evidencia)}</h3>
               <button className="modal-close" onClick={() => setEvidencia(null)}>✕</button>
             </div>
             <div className="modal-body" style={{padding: 20}}>

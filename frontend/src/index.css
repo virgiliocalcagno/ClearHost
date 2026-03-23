@@ -2,39 +2,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Colores */
-  --bg: #F5F5F7;
+  /* Colores - Sólidos y Premium (Slate & Teal) */
+  --bg: #F8FAFC; /* Slate 50 */
   --surface: #FFFFFF;
-  --primary: #00BFA6;
-  --primary-dark: #00897B;
-  --primary-light: rgba(0,191,166,0.08);
-  --success: #22C55E;
-  --success-light: rgba(34,197,94,0.08);
-  --warning: #F59E0B;
-  --warning-light: rgba(245,158,11,0.08);
-  --error: #EF4444;
-  --error-light: rgba(239,68,68,0.08);
-  --info: #3B82F6;
-  --info-light: rgba(59,130,246,0.08);
-  --text: #1E293B;
+  --sidebar-bg: #0F172A; /* Slate 900 */
+  --primary: #0D9488; /* Teal 600 */
+  --primary-dark: #0F766E; /* Teal 700 */
+  --primary-light: #F0FDFA; /* Teal 50 */
+  --success: #10B981; /* Emerald 500 */
+  --success-light: #ECFDF5;
+  --warning: #F59E0B; /* Amber 500 */
+  --warning-light: #FFFBEB;
+  --error: #EF4444; /* Red 500 */
+  --error-light: #FEF2F2;
+  --info: #3B82F6; /* Blue 500 */
+  --info-light: #EFF6FF;
+  
+  --text: #0F172A; /* Slate 900 */
   --text-primary: #1E293B;
-  --text-secondary: #6B7280;
-  --text-tertiary: #9CA3AF;
-  --border: #E5E7EB;
-  --divider: #F3F4F6;
+  --text-secondary: #475569; /* Slate 600 */
+  --text-tertiary: #94A3B8; /* Slate 400 */
+  --border: #E2E8F0; /* Slate 200 */
+  --divider: #F1F5F9; /* Slate 100 */
 
-  /* Sombras */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-card: 0 2px 12px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
-  --shadow-primary: 0 4px 14px rgba(0,191,166,0.25);
+  /* Sombras - Sólidas, sin ruido */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --shadow-primary: 0 4px 12px rgba(13,148,136,0.15);
   --shadow-success: 0 4px 14px rgba(34,197,94,0.25);
 
   /* Radios */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-full: 9999px;
 
   /* Tipografía */
@@ -46,10 +49,13 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
+html, body {
   background: var(--bg);
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 /* ===== Layout mobile-first ===== */
@@ -58,6 +64,10 @@ body {
   margin: 0 auto;
   min-height: 100dvh;
   position: relative;
+  overflow-x: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ===== Cards ===== */
@@ -184,8 +194,9 @@ body {
 .bottom-bar {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  margin: 0 auto;
   width: 100%;
   max-width: 480px;
   padding: 16px 20px;
@@ -193,6 +204,7 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--divider);
   box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+  z-index: 1000;
 }
 
 /* ===== Animaciones ===== */

@@ -93,9 +93,19 @@ export default function TareaDetalle() {
               <span className="td-info-value">{tarea.nombre_huesped || 'N/A'}</span>
             </div>
             <div className="td-info-item">
+              <span className="td-info-label">🕐 Inicio Sugerido</span>
+              <span className="td-info-value" style={{color:'var(--error)', fontWeight:800}}>{tarea.hora_inicio ? tarea.hora_inicio.substring(0,5) : '11:00'}</span>
+            </div>
+            <div className="td-info-item">
               <span className="td-info-label">🕐 Check-out</span>
               <span className="td-info-value">{tarea.check_out || 'N/A'}</span>
             </div>
+            {tarea.pago_al_staff > 0 && (
+              <div className="td-info-item" style={{gridColumn: '1 / span 2', marginTop: 10, padding: '10px', background: 'var(--primary-light)', borderRadius: 8, display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                <span className="td-info-label" style={{color: 'var(--primary)', fontWeight: 700}}>💰 Pago por esta tarea</span>
+                <span className="td-info-value" style={{color: 'var(--primary)', fontSize: 18}}>DOP {tarea.pago_al_staff.toLocaleString()}</span>
+              </div>
+            )}
           </div>
         </div>
 

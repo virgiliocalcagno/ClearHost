@@ -28,19 +28,24 @@ export default function TaskCard({ tarea, onPress }) {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Top row: badge + laundry */}
+      {/* Top row: badge + laundry + ID */}
       <View style={styles.topRow}>
-        <View style={[styles.badge, { backgroundColor: estado.bg }]}>
-          <Ionicons name={estado.icon} size={14} color={estado.color} />
-          <Text style={[styles.badgeText, { color: estado.color }]}>
-            {estado.label}
-          </Text>
-        </View>
-        {tarea.requiere_lavado_ropa && (
-          <View style={styles.laundryBadge}>
-            <Text style={styles.laundryText}>🧺 Lavado</Text>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <View style={[styles.badge, { backgroundColor: estado.bg }]}>
+            <Ionicons name={estado.icon} size={14} color={estado.color} />
+            <Text style={[styles.badgeText, { color: estado.color }]}>
+              {estado.label}
+            </Text>
           </View>
-        )}
+          {tarea.requiere_lavado_ropa && (
+            <View style={styles.laundryBadge}>
+              <Text style={styles.laundryText}>🧺 Lavado</Text>
+            </View>
+          )}
+        </View>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>
+          T-{tarea.id_secuencial}
+        </Text>
       </View>
 
       {/* Property name */}

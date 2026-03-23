@@ -15,10 +15,13 @@ class StaffCreate(BaseModel):
     documento: str = Field(..., min_length=4, max_length=50)
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
-    password: str = Field(..., min_length=6)
+    telefono_emergencia: Optional[str] = None
+    direccion: Optional[str] = None
+    referencias: Optional[dict] = None # Ej: [{"nombre": "...", "tel": "...", "rel": "..."}]
+    
+    password: str = Field(..., min_length=4) # Bajado a 4 para facilitar PINs de campo
     rol: RolStaff = RolStaff.STAFF
     zona_id: Optional[str] = None
-
 
 
 class StaffUpdate(BaseModel):
@@ -26,10 +29,13 @@ class StaffUpdate(BaseModel):
     documento: Optional[str] = None
     email: Optional[EmailStr] = None
     telefono: Optional[str] = None
-    password: Optional[str] = Field(None, min_length=6)
+    telefono_emergencia: Optional[str] = None
+    direccion: Optional[str] = None
+    referencias: Optional[dict] = None
+    
+    password: Optional[str] = Field(None, min_length=4)
     rol: Optional[RolStaff] = None
     zona_id: Optional[str] = None
-
     disponible: Optional[bool] = None
 
 
@@ -39,6 +45,10 @@ class StaffResponse(BaseModel):
     documento: str
     email: Optional[str] = None
     telefono: Optional[str] = None
+    telefono_emergencia: Optional[str] = None
+    direccion: Optional[str] = None
+    referencias: Optional[dict] = None
+    
     rol: RolStaff
     zona_id: Optional[str] = None
     zona_nombre: Optional[str] = None
@@ -50,10 +60,8 @@ class StaffResponse(BaseModel):
     model_config = {"from_attributes": True}
 
     @model_validator(mode='after')
-    def set_zona_nombre(self) -> 'StaffResponse':
-        # Si el objeto original tiene la relación zona, la usamos
-        # En Pydantic V2, tenemos acceso al objeto original si usamos from_attributes
-        # pero es más seguro si el router ya lo pre-carga.
+    def enrich_data(self) -> 'StaffResponse':
+        # Mantenemos para compatibilidad si el router no lo precarga
         return self
 
 
@@ -86,7 +94,7 @@ class ResetPasswordRequest(BaseModel):
 class AdelantoCreate(BaseModel):
     staff_id: str
     monto: float
-    moneda: str = "MXN"
+    moneda: str = "DOP"
     notas: Optional[str] = None
 
 class AdelantoResponse(BaseModel):

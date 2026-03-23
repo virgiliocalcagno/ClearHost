@@ -101,13 +101,18 @@ async def notificar_tarea_completada(tarea: TareaOperativa, db: AsyncSession):
     # Obtener zona de la propiedad
     zona_id = tarea.propiedad.zona_id if tarea.propiedad else None
 
-    # Notificar a SUPER_ADMIN y MANAGER_LOCAL de la zona
+    from sqlalchemy import or_, and_
     result = await db.execute(
         select(UsuarioStaff).where(
-            (UsuarioStaff.fcm_token.isnot(None)) &
-            (
-                (UsuarioStaff.rol == RolStaff.SUPER_ADMIN) |
-                ((UsuarioStaff.rol == RolStaff.MANAGER_LOCAL) & (UsuarioStaff.zona_id == zona_id))
+            and_(
+                UsuarioStaff.fcm_token.isnot(None),
+                or_(
+                    UsuarioStaff.rol == RolStaff.SUPER_ADMIN,
+                    and_(
+                        UsuarioStaff.rol == RolStaff.MANAGER_LOCAL,
+                        UsuarioStaff.zona_id == zona_id
+                    )
+                )
             )
         )
     )
@@ -243,10 +248,16 @@ async def alertar_admins_tareas_pendientes():
         # Notificar admins (SUPER_ADMIN y MANAGER_LOCAL si hay zona)
         # Aquí alertar_admins_tareas_pendientes no tiene zona_id, así que enviamos a todos los SUPER_ADMIN
         # Para managers, se podría iterar por zona, pero simplificaremos a SUPER_ADMIN para resumen diario global
+        from sqlalchemy import or_, and_
         admin_result = await db.execute(
             select(UsuarioStaff).where(
-                UsuarioStaff.rol == RolStaff.SUPER_ADMIN,
-                UsuarioStaff.fcm_token.isnot(None),
+                and_(
+                    UsuarioStaff.fcm_token.isnot(None),
+                    or_(
+                        UsuarioStaff.rol == RolStaff.SUPER_ADMIN,
+                        UsuarioStaff.rol == RolStaff.MANAGER_LOCAL
+                    )
+                )
             )
         )
         admins = admin_result.scalars().all()
@@ -271,12 +282,18 @@ async def notificar_alerta_inventario(item, db: AsyncSession):
     # Por ahora, enviamos a todos los SUPER_ADMIN y al manager si hay zona_id
     zona_id = getattr(item, 'zona_id', None)
 
+    from sqlalchemy import or_, and_
     result = await db.execute(
         select(UsuarioStaff).where(
-            (UsuarioStaff.fcm_token.isnot(None)) &
-            (
-                (UsuarioStaff.rol == RolStaff.SUPER_ADMIN) |
-                ((UsuarioStaff.rol == RolStaff.MANAGER_LOCAL) & (UsuarioStaff.zona_id == zona_id) if zona_id else False)
+            and_(
+                UsuarioStaff.fcm_token.isnot(None),
+                or_(
+                    UsuarioStaff.rol == RolStaff.SUPER_ADMIN,
+                    and_(
+                        UsuarioStaff.rol == RolStaff.MANAGER_LOCAL,
+                        UsuarioStaff.zona_id == zona_id
+                    ) if zona_id else False
+                )
             )
         )
     )

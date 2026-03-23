@@ -65,7 +65,7 @@ export default function CalendarioScreen({ navigation, route }) {
   ).length;
   const enProgreso = tareas.filter((t) => t.estado === 'ACEPTADA' || t.estado === 'EN_PROGRESO').length;
   const completadas = tareas.filter(
-    (t) => t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA'
+    (t) => t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA' || t.estado === 'CLEAN_AND_READY'
   ).length;
 
   if (loading) {

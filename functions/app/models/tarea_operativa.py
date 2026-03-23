@@ -7,7 +7,7 @@ import uuid
 import enum
 from datetime import datetime, date, time
 
-from sqlalchemy import String, Date, Time, DateTime, Text, Boolean, ForeignKey, Enum as SQLEnum, JSON, Float
+from sqlalchemy import String, Date, Time, DateTime, Text, Boolean, ForeignKey, Enum as SQLEnum, JSON, Float, Integer, FetchedValue, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -35,9 +35,11 @@ class TareaOperativa(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
+    # Identificador legible para admin/staff (Generado por DB SERIAL)
+    id_secuencial: Mapped[int] = mapped_column(Integer, FetchedValue(), server_default=text("nextval('tarea_id_seq')"), unique=True, index=True, nullable=False)
 
-    reserva_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("reservas.id"), nullable=False
+    reserva_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("reservas.id"), nullable=True
     )
     propiedad_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("propiedades.id"), nullable=False
@@ -61,7 +63,7 @@ class TareaOperativa(Base):
 
     # ── Datos Financieros (Doble Tarifario) ──
     pago_al_staff: Mapped[float] = mapped_column(Float, default=0.0, comment="Pago por esta tarea")
-    moneda_tarea: Mapped[str] = mapped_column(String(10), default="MXN")
+    moneda_tarea: Mapped[str] = mapped_column(String(10), default="DOP")
     
     fecha_asignacion: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -76,6 +78,7 @@ class TareaOperativa(Base):
     fotos_despues: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
 
     requiere_lavado_ropa: Mapped[bool] = mapped_column(Boolean, default=True)
+    liquidada: Mapped[bool] = mapped_column(Boolean, default=False, comment="Si ya se pagó al staff")
 
     notas_staff: Mapped[str | None] = mapped_column(Text, nullable=True)
 

@@ -90,11 +90,11 @@ class Propiedad(Base):
     # ── Información operativa y financiera (Doble Tarifario) ──
     # Lo que se cobra al propietario por la limpieza/operación
     cobro_propietario: Mapped[float | None] = mapped_column(Float, default=0.0, comment="Cobro al dueño")
-    moneda_cobro: Mapped[str | None] = mapped_column(String(10), default="MXN")
+    moneda_cobro: Mapped[str | None] = mapped_column(String(10), default="DOP")
     
     # Lo que se paga al staff por la operación de esta unidad
     pago_staff: Mapped[float | None] = mapped_column(Float, default=0.0, comment="Pago al staff")
-    moneda_pago: Mapped[str | None] = mapped_column(String(10), default="MXN")
+    moneda_pago: Mapped[str | None] = mapped_column(String(10), default="DOP")
 
     tarifa_limpieza: Mapped[float | None] = mapped_column(Float, nullable=True, comment="Costo de limpieza base (Deprecado)")
     contacto_emergencia: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Nombre y teléfono de contacto de emergencia")

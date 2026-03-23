@@ -7,33 +7,38 @@ import './Dashboard.css';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [tareas, setTareas] = useState([]);
+  const [billetera, setBilletera] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showWalletDetail, setShowWalletDetail] = useState(false);
   const staff = getStoredStaff();
 
   useEffect(() => {
     if (!staff) { navigate('/'); return; }
-    loadTareas();
+    loadData();
 
     // Polling cada 30 segundos
     const interval = setInterval(() => {
-      loadTareas(true);
+      loadData(true);
     }, 30000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const loadTareas = async (silent = false) => {
+  const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // Traer TODAS las tareas asignadas a este staff (no solo las de hoy)
-      const res = await api.get(`/tareas/`, { params: { asignado_a: staff.id } });
-      // Filtrar solo las pendientes/en_progreso o completadas recientes
-      const activas = res.data.filter(t => 
-        ['PENDIENTE', 'ASIGNADA_NO_CONFIRMADA', 'ACEPTADA', 'EN_PROGRESO', 'COMPLETADA'].includes(t.estado)
+      const [tareasRes, billRes] = await Promise.all([
+        api.get(`/tareas/`, { params: { asignado_a: staff.id } }),
+        api.get(`/staff/${staff.id}/billetera`)
+      ]);
+      
+      const activas = tareasRes.data.filter(t => 
+        ['PENDIENTE', 'ASIGNADA_NO_CONFIRMADA', 'ACEPTADA', 'EN_PROGRESO', 'COMPLETADA', 'CLEAN_AND_READY', 'VERIFICADA'].includes(t.estado)
       );
       setTareas(activas);
+      setBilletera(billRes.data);
     } catch (err) {
-      console.error('Error cargando tareas:', err);
+      console.error('Error cargando datos:', err);
     } finally {
       setLoading(false);
     }
@@ -44,7 +49,11 @@ export default function Dashboard() {
   const stats = {
     pendientes: tareas.filter(t => t.estado === 'PENDIENTE' || t.estado === 'ASIGNADA_NO_CONFIRMADA').length,
     enProgreso: tareas.filter(t => t.estado === 'ACEPTADA' || t.estado === 'EN_PROGRESO').length,
-    completas: tareas.filter(t => t.estado === 'CLEAN_AND_READY' || t.estado === 'COMPLETADA' || t.estado === 'VERIFICADA').length,
+    completas: tareas.filter(t => 
+      t.estado === 'CLEAN_AND_READY' || 
+      t.estado === 'COMPLETADA' || 
+      t.estado === 'VERIFICADA'
+    ).length,
   };
 
   const getStatusBadge = (estado) => {
@@ -53,9 +62,9 @@ export default function Dashboard() {
       ASIGNADA_NO_CONFIRMADA: { cls: 'badge-pending', txt: 'Falta Aceptar' },
       ACEPTADA: { cls: 'badge-progress', txt: 'Aceptada' },
       EN_PROGRESO: { cls: 'badge-progress', txt: 'En Limpieza' },
-      CLEAN_AND_READY: { cls: 'badge-done', txt: 'Clean & Ready' },
-      COMPLETADA: { cls: 'badge-done', txt: 'Clean & Ready' },
-      VERIFICADA: { cls: 'badge-done', txt: 'Verificada' },
+      CLEAN_AND_READY: { cls: 'badge-done', txt: 'Realizada' },
+      COMPLETADA: { cls: 'badge-done', txt: 'Realizada' },
+      VERIFICADA: { cls: 'badge-done', txt: 'Lista / Verificada' },
     };
     const s = map[estado] || map.PENDIENTE;
     return <span className={`badge ${s.cls}`}>{s.txt}</span>;
@@ -87,6 +96,54 @@ export default function Dashboard() {
         </div>
         <button className="dash-logout" onClick={handleLogout} title="Cerrar sesión">🚪</button>
       </div>
+
+      {/* Billetera */}
+      {billetera && (
+        <div 
+          className="billetera-card fade-in" 
+          onClick={() => setShowWalletDetail(!showWalletDetail)}
+          style={{flexDirection:'column', alignItems:'stretch', gap:10, cursor:'pointer'}}
+        >
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <div className="billetera-info">
+              <h4>Saldo por cobrar</h4>
+              <div className="monto">DOP {billetera.saldo_neto?.toLocaleString() || '0.00'}</div>
+            </div>
+            <div className="billetera-icon">{showWalletDetail ? '🔽' : '💰'}</div>
+          </div>
+
+          {showWalletDetail ? (
+            <div className="wallet-detail-list">
+              {billetera.historial_tareas && billetera.historial_tareas.length > 0 ? (
+                billetera.historial_tareas.map((item, idx) => (
+                  <div key={idx} className="wallet-detail-item">
+                    <span className="detail-task">{item.id_secuencial ? `T-${item.id_secuencial}` : item.tipo}</span>
+                    <span className="detail-date">{new Date(item.fecha).toLocaleDateString('es-ES', {day:'2-digit', month:'short'})}</span>
+                    <span className="detail-amount">{item.moneda} {item.monto?.toLocaleString()}</span>
+                    <span style={{fontWeight:700}}>DOP {item.monto?.toLocaleString()}</span>
+                  </div>
+                ))
+              ) : (
+                <p style={{fontSize:12, opacity:0.7}}>No hay tareas verificadas pendientes de pago.</p>
+              )}
+            </div>
+          ) : (
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, paddingTop:10, borderTop:'1px solid rgba(255,255,255,0.1)', fontSize:12, opacity:0.9}}>
+              <div>
+                <span style={{display:'block', opacity:0.7}}>Total Ganado</span>
+                <span style={{fontWeight:700}}>DOP {billetera.total_ganado?.toLocaleString() || '0'}</span>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <span style={{display:'block', opacity:0.7}}>Pagado/Adelantos</span>
+                <span style={{fontWeight:700, color:'#fda4af'}}>- DOP {billetera.total_adelantos?.toLocaleString() || '0'}</span>
+              </div>
+            </div>
+          )}
+          <div style={{fontSize:10, textAlign:'center', opacity:0.5, marginTop:showWalletDetail ? 10 : 0}}>
+            {showWalletDetail ? 'Toca para contraer' : 'Toca para ver detalle'}
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="dash-stats fade-in">
@@ -122,13 +179,21 @@ export default function Dashboard() {
             {sortedTareas.map((tarea, i) => (
               <div 
                 key={tarea.id} 
-                className={`task-card card fade-in priority-${tarea.prioridad || 'BAJA'}`} 
+                className={`task-card card fade-in priority-${tarea.prioridad || 'BAJA'} ${['CLEAN_AND_READY', 'VERIFICADA', 'COMPLETADA'].includes(String(tarea.estado).trim().toUpperCase()) ? 'status-done' : ''}`} 
                 style={{animationDelay: `${i*80}ms`}}
               >
                 <div className="task-top">
                   <div>
-                    <h4 className="task-prop">{tarea.nombre_propiedad || 'Propiedad'}</h4>
-                    {getPriorityBadge(tarea.prioridad)}
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <h4 classNAme="task-prop" style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'180px'}}>{tarea.nombre_propiedad || 'Propiedad'}</h4>
+                      <span style={{fontSize:11, fontWeight:800, color:'var(--primary)'}}>T-{tarea.id_secuencial}</span>
+                    </div>
+                    <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginTop:4}}>
+                      {getPriorityBadge(tarea.prioridad)}
+                      <span className="task-payment" style={{background: '#f0fdfa', padding: '2px 6px', borderRadius: '4px', border: '1px solid #99f6e4', fontSize: '12px'}}>
+                        💵 DOP {tarea.pago_al_staff?.toLocaleString() || '0'}
+                      </span>
+                    </div>
                   </div>
                   {getStatusBadge(tarea.estado)}
                 </div>
@@ -136,8 +201,8 @@ export default function Dashboard() {
                   <p className="task-address">📍 {tarea.direccion_propiedad}</p>
                 )}
                 <div className="task-pills">
-                  <span className="pill">📅 {tarea.fecha_programada}</span>
-                  <span className="pill">🕐 Checkout: {tarea.check_out || 'N/A'}</span>
+                  <span className="pill" style={{background:'#fdf2f2', color:'#dc2626', fontWeight:700}}>🕐 Inicio: {tarea.hora_inicio ? tarea.hora_inicio.substring(0,5) : '11:00 AM'}</span>
+                  <span className="pill">📅 {new Date(tarea.fecha_programada).toLocaleDateString('es-ES', {day:'numeric', month:'short'})}</span>
                   <span className="pill">👤 {tarea.nombre_huesped || 'S/Hu.'}</span>
                 </div>
 

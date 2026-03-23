@@ -41,6 +41,7 @@ const AdminPanel = () => {
 
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ show: false, type: '', edit: null });
+  const openModal = (config) => setModal({ ...config, show: true });
   const [toast, setToast] = useState({ show: false, message: '' });
 
   const showToast = (msg) => {
@@ -100,12 +101,20 @@ const AdminPanel = () => {
     try {
       let endpoint = '';
       let method = 'POST';
+      let payload = { ...formData };
+
+      // Limpieza de datos comunes para evitar 422/500
+      if (payload.pago_al_staff !== undefined) payload.pago_al_staff = parseFloat(payload.pago_al_staff) || 0;
+      if (payload.reserva_id === "" || payload.reserva_id === "null") payload.reserva_id = null;
+      if (payload.asignado_a === "" || payload.asignado_a === "null") payload.asignado_a = null;
+      if (payload.propiedad_id === "") delete payload.propiedad_id; // Dejar que falle la validación si es requerido
       
       switch (modal.type) {
         case 'propiedad': endpoint = '/propiedades'; break;
         case 'reserva': endpoint = '/reservas'; break;
         case 'staff': endpoint = '/staff'; break;
-        case 'staff-edit': endpoint = `/staff/${formData.id}`; method = 'PUT'; break;
+        case 'staff-edit': endpoint = `/staff/${payload.id}`; method = 'PUT'; break;
+        case 'tarea': endpoint = '/tareas'; break;
         case 'propietario': endpoint = '/propietarios'; break;
         case 'incidencia': endpoint = '/incidencias'; break;
         case 'gasto': endpoint = '/gastos'; break;
@@ -116,20 +125,22 @@ const AdminPanel = () => {
       if (modal.edit && modal.type !== 'staff-edit') {
         method = 'PUT';
         const id = modal.edit.id;
-        await api.put(`${endpoint}/${id}`, formData);
+        await api.put(`${endpoint}/${id}`, payload);
         showToast('Actualizado con éxito');
       } else if (method === 'PUT') {
-        await api.put(endpoint, formData);
+        await api.put(endpoint, payload);
         showToast('Actualizado con éxito');
       } else {
-        await api.post(endpoint, formData);
+        await api.post(endpoint, payload);
         showToast('Creado con éxito');
       }
       
       setModal({ show: false, type: '', edit: null });
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.detail || "Error al guardar");
+      const detail = error.response?.data?.detail;
+      const errorMsg = typeof detail === 'object' ? JSON.stringify(detail, null, 2) : (detail || error.message || "Error al guardar");
+      alert("Error detallado:\n" + errorMsg);
     }
   };
 
@@ -140,21 +151,21 @@ const AdminPanel = () => {
       case 'dashboard':
         return <DashboardView stats={stats} data={data} />;
       case 'propiedades':
-        return <PropiedadesView data={data.propiedades} propietarios={data.propietarios} onAction={setModal} {...commonProps} />;
+        return <PropiedadesView data={data.propiedades} propietarios={data.propietarios} onAction={openModal} {...commonProps} />;
       case 'tareas':
-        return <TareasView data={data.tareas} propiedades={data.propiedades} staffList={data.staff} {...commonProps} />;
+        return <TareasView data={data.tareas} propiedades={data.propiedades} staffList={data.staff} onAction={openModal} {...commonProps} />;
       case 'reservas':
-        return <ReservasView data={data.reservas} propiedades={data.propiedades} onAction={setModal} {...commonProps} />;
+        return <ReservasView data={data.reservas} propiedades={data.propiedades} onAction={openModal} {...commonProps} />;
       case 'staff':
-        return <StaffView data={data.staff} onAction={setModal} {...commonProps} />;
+        return <StaffView data={data.staff} onAction={openModal} {...commonProps} />;
       case 'propietarios':
-        return <PropietariosView data={data.propietarios} propiedades={data.propiedades} onAction={setModal} navigate={navigate} {...commonProps} />;
+        return <PropietariosView data={data.propietarios} propiedades={data.propiedades} onAction={openModal} navigate={navigate} {...commonProps} />;
       case 'mantenimiento':
-        return <MantenimientoView data={data.incidencias} propiedades={data.propiedades} onAction={setModal} {...commonProps} />;
+        return <MantenimientoView data={data.incidencias} propiedades={data.propiedades} onAction={openModal} {...commonProps} />;
       case 'liquidacion':
-        return <LiquidacionView gastos={data.gastos} propiedades={data.propiedades} reservas={data.reservas} onAction={setModal} {...commonProps} />;
+        return <LiquidacionView gastos={data.gastos} propiedades={data.propiedades} reservas={data.reservas} onAction={openModal} {...commonProps} />;
       case 'nomina':
-        return <NominaView staffList={data.staff} onAction={setModal} {...commonProps} />;
+        return <NominaView staffList={data.staff} onAction={openModal} {...commonProps} />;
       default:
         return <DashboardView stats={stats} data={data} />;
     }

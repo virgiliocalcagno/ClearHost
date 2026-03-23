@@ -31,9 +31,9 @@ class PropiedadCreate(BaseModel):
     propietario_id: Optional[str] = None
     zona_id: Optional[str] = None
     cobro_propietario: float = 0.0
-    moneda_cobro: str = "MXN"
+    moneda_cobro: str = "DOP"
     pago_staff: float = 0.0
-    moneda_pago: str = "MXN"
+    moneda_pago: str = "DOP"
 
 
 class PropiedadUpdate(BaseModel):
@@ -75,9 +75,9 @@ class PropiedadResponse(BaseModel):
     zona_id: Optional[str] = None
     zona_nombre: Optional[str] = None
     cobro_propietario: float = 0.0
-    moneda_cobro: str = "MXN"
+    moneda_cobro: str = "DOP"
     pago_staff: float = 0.0
-    moneda_pago: str = "MXN"
+    moneda_pago: str = "DOP"
     created_at: datetime
     updated_at: datetime
 
@@ -86,7 +86,14 @@ class PropiedadResponse(BaseModel):
     @classmethod
     def model_validate(cls, obj, **kwargs):
         data = super().model_validate(obj, **kwargs)
-        # Resolver nombre de zona desde la relación ORM
+        # Priorizar relaciones ORM para nombres descriptivos
         if hasattr(obj, 'zona') and obj.zona:
             data.zona_nombre = obj.zona.nombre
+        
+        if hasattr(obj, 'propietario') and obj.propietario:
+            data.propietario_nombre = obj.propietario.nombre
+        elif not data.propietario_nombre and hasattr(obj, 'propietario_nombre'):
+            # Fallback al campo estático si existe
+            data.propietario_nombre = getattr(obj, 'propietario_nombre', None)
+            
         return data

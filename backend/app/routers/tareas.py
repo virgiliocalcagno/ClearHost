@@ -15,7 +15,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.tarea_operativa import TareaOperativa, EstadoTarea
 from app.models.usuario_staff import UsuarioStaff, RolStaff
-from app.schemas.tarea_limpieza import (
+from app.schemas.tarea_operativa import (
     TareaCreate, TareaUpdate, TareaResponse, TareaConDetalles,
     ChecklistUpdate, AuditoriaUpdate,
 )
@@ -30,7 +30,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def listar_tareas(
     fecha: date | None = None,
     estado: str | None = None,
-    asignado_a: UUID | None = None,
+    asignado_a: str | None = None,
+    id_secuencial: int | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Listar tareas con filtros opcionales, enriquecidas con detalles."""
@@ -41,13 +42,18 @@ async def listar_tareas(
         query = query.where(TareaOperativa.estado == estado)
     if asignado_a:
         query = query.where(TareaOperativa.asignado_a == asignado_a)
+    if id_secuencial:
+        query = query.where(TareaOperativa.id_secuencial == id_secuencial)
+        
     query = query.order_by(TareaOperativa.fecha_programada, TareaOperativa.hora_inicio)
     result = await db.execute(query)
     tareas = result.scalars().all()
 
-    tareas_detalladas = []
+    # Enriquecer con info de propiedad y reserva para la vista de admin
+    results = []
     for tarea in tareas:
         tarea_dict = TareaResponse.model_validate(tarea).model_dump()
+        tarea_dict["id_secuencial"] = tarea.id_secuencial
         if tarea.propiedad:
             tarea_dict["nombre_propiedad"] = tarea.propiedad.nombre
             tarea_dict["direccion_propiedad"] = tarea.propiedad.direccion

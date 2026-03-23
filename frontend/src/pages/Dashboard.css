@@ -25,19 +25,78 @@
 
 /* Stats */
 .dash-stats {
-  padding: 0 20px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  padding: 0 16px;
+  display: flex;
+  flex-wrap: wrap; /* Permite que bajen si no caben */
+  gap: 8px;
   margin-bottom: 20px;
 }
 .stat-card {
+  flex: 1 1 calc(33.333% - 8px); /* Intenta 3 columnas */
+  min-width: 90px; /* Ancho mínimo para que el texto no se rompa feo */
   background: var(--surface);
   border-radius: var(--radius-lg);
-  padding: 14px;
+  padding: 10px 4px;
   text-align: center;
   box-shadow: var(--shadow-sm);
   border-top: 3px solid;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 380px) {
+  .stat-card {
+    flex: 1 1 calc(50% - 8px); /* 2 columnas en móviles muy pequeños */
+  }
+}
+
+@media (max-width: 320px) {
+  .stat-card {
+    flex: 1 1 100%; /* 1 columna en pantallas ultra pequeñas */
+  }
+}
+
+/* Billetera Card */
+.billetera-card {
+  margin: 0 20px 20px;
+  background: linear-gradient(135deg, var(--sidebar-bg), #1e293b);
+  color: white;
+  padding: 18px 20px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-lg);
+}
+.billetera-info h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-bottom: 4px; }
+.billetera-info .monto { font-size: 24px; font-weight: 800; color: #5eead4; }
+.billetera-icon { font-size: 32px; opacity: 0.9; }
+.wallet-detail-list {
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.wallet-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.task-payment {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 14px;
 }
 .stat-pending  { border-top-color: var(--warning); }
 .stat-progress { border-top-color: var(--info); }
@@ -58,6 +117,12 @@
 .task-card { padding: 18px; }
 .task-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
 .task-prop { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.task-card.status-done {
+  animation: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--success) !important;
+  background-color: var(--surface) !important;
+}
 .task-priority-badge { font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; letter-spacing: 0.5px; }
 
 /* Semáforo Prioridad */

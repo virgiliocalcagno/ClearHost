@@ -18,7 +18,8 @@ class EstadoTarea(str, enum.Enum):
     ASIGNADA_NO_CONFIRMADA = "ASIGNADA_NO_CONFIRMADA"
     ACEPTADA = "ACEPTADA"
     EN_PROGRESO = "EN_PROGRESO"
-    CLEAN_AND_READY = "CLEAN_AND_READY"
+    COMPLETADA = "COMPLETADA" # Terminada por staff
+    CLEAN_AND_READY = "CLEAN_AND_READY" # Alias para completada
     VERIFICADA = "VERIFICADA" # Para el admin
 
 
@@ -35,6 +36,8 @@ class TareaOperativa(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
+    # ID secuencial para vista de usuario (T-1001)
+    id_secuencial: Mapped[int] = mapped_column(Integer, autoincrement=True, unique=True, index=True, nullable=True)
 
     reserva_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("reservas.id"), nullable=False

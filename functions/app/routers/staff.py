@@ -13,6 +13,7 @@ from jose import jwt
 
 from app.database import get_db
 from app.config import get_settings
+from app.dependencies import get_current_user, require_role
 from app.models.tarea_operativa import TareaOperativa, EstadoTarea
 from app.models.adelanto_staff import AdelantoStaff
 from app.models.usuario_staff import UsuarioStaff, RolStaff
@@ -23,7 +24,7 @@ from app.schemas.usuario_staff import (
     AdelantoCreate, AdelantoResponse, BilleteraResponse
 )
 
-router = APIRouter(prefix="/staff", tags=["Staff"])
+router = APIRouter(prefix="/staff", tags=["Staff"], redirect_slashes=False)
 
 
 @router.get("/{staff_id}/billetera", response_model=BilleteraResponse)
@@ -39,7 +40,8 @@ async def obtener_billetera_staff(
     result_tareas = await db.execute(
         select(TareaOperativa).where(
             TareaOperativa.asignado_a == str(staff_id),
-            TareaOperativa.estado == EstadoTarea.VERIFICADA
+            TareaOperativa.estado == EstadoTarea.VERIFICADA,
+            TareaOperativa.liquidada == False
         )
     )
     tareas = result_tareas.scalars().all()
@@ -55,6 +57,7 @@ async def obtener_billetera_staff(
     # Historial de tareas para la app móvil (Privacy Wall: solo lo que ganó el staff)
     historial = [
         {
+            "id_secuencial": t.id_secuencial,
             "fecha": t.fecha_programada,
             "tipo": t.tipo_tarea,
             "monto": t.pago_al_staff,
@@ -68,7 +71,7 @@ async def obtener_billetera_staff(
         total_ganado=total_ganado,
         total_adelantos=total_adelantos,
         saldo_neto=total_ganado - total_adelantos,
-        moneda="MXN", # O la moneda principal del sistema
+        moneda="DOP", # O la moneda principal del sistema (DOP en RD)
         historial_tareas=historial
     )
 
@@ -84,9 +87,7 @@ async def registrar_adelanto(
     await db.commit()
     await db.refresh(adelanto)
     return adelanto
-from jose import JWTError
-
-router = APIRouter(prefix="/staff", tags=["Staff"])
+# ── Auth & Tokens ──
 
 settings = get_settings()
 
@@ -109,16 +110,29 @@ async def login(
         select(UsuarioStaff).where(
             or_(
                 UsuarioStaff.email == data.identificador,
-                UsuarioStaff.documento == data.identificador
+                UsuarioStaff.documento == data.identificador,
+                UsuarioStaff.telefono == data.identificador
             )
         )
     )
     user = result.scalar_one_or_none()
-    if not user or not bcrypt.checkpw(data.password.encode('utf-8'), user.password_hash.encode('utf-8')):
+    if not user:
+        print(f"DEBUG: Login failed for {data.identificador} - User not found")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas",
         )
+    
+    # Verificar contraseña
+    password_match = bcrypt.checkpw(data.password.encode('utf-8'), user.password_hash.encode('utf-8'))
+    if not password_match:
+        print(f"DEBUG: Login failed for {data.identificador} - Password mismatch")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales incorrectas",
+        )
+    
+    print(f"DEBUG: Login success for {data.identificador} (Rol: {user.rol.value})")
     token = create_access_token({"sub": str(user.id), "rol": user.rol.value})
     return TokenResponse(access_token=token, staff=StaffResponse.model_validate(user))
 
@@ -174,6 +188,7 @@ async def obtener_staff(
 async def crear_staff(
     data: StaffCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(require_role([RolStaff.SUPER_ADMIN]))
 ):
     """Registrar un nuevo miembro del staff."""
     # Verificar email único si se proporciona
@@ -205,6 +220,7 @@ async def actualizar_staff(
     staff_id: UUID,
     data: StaffUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(get_current_user)
 ):
     """Actualizar información del staff."""
     result = await db.execute(

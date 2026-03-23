@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models.reserva import Reserva
+from app.models.reserva import Reserva, EstadoReserva, FuenteReserva
 from app.models.propiedad import Propiedad
 from app.schemas.reserva import ReservaCreate, ReservaUpdate, ReservaResponse
 from app.services.task_automation import crear_tarea_para_reserva
@@ -38,6 +38,49 @@ async def listar_reservas(
     query = query.order_by(Reserva.check_in.desc())
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.get("/ical/export/{propiedad_id}")
+async def exportar_ical_manual(
+    propiedad_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Exporta un calendario iCal (.ics) con reservas MANUALES confirmadas.
+    Permite el 2-way sync con Airbnb sin crear bucles.
+    """
+    from icalendar import Calendar, Event
+    from fastapi.responses import Response
+
+    # 1. Obtener reservas
+    result = await db.execute(
+        select(Reserva).where(
+            Reserva.propiedad_id == str(propiedad_id),
+            Reserva.fuente == FuenteReserva.MANUAL,
+            Reserva.estado == EstadoReserva.CONFIRMADA
+        )
+    )
+    reservas = result.scalars().all()
+
+    # 2. Crear calendario
+    cal = Calendar()
+    cal.add('prodid', '-//ClearHost PMS//Manual Sync//EN')
+    cal.add('version', '2.0')
+
+    for res in reservas:
+        event = Event()
+        event.add('summary', f"Reserva: {res.nombre_huesped}")
+        event.add('dtstart', res.check_in)
+        event.add('dtend', res.check_out)
+        event.add('description', f"Reserva manual en ClearHost. UID: {res.id}")
+        event.add('uid', f"manual-{res.id}@clearhost")
+        cal.add_component(event)
+
+    return Response(
+        content=cal.to_ical(), 
+        media_type="text/calendar",
+        headers={"Content-Disposition": f"attachment; filename=reservas_manuales_{propiedad_id}.ics"}
+    )
 
 
 @router.get("/proximas", response_model=list[ReservaResponse])
@@ -92,6 +135,23 @@ async def crear_reserva(
     if data.check_out <= data.check_in:
         raise HTTPException(status_code=400, detail="check_out debe ser posterior a check_in")
 
+    # Validar solapamiento (Overbooking)
+    # Una reserva solapa si: (entrada_existente < salida_nueva) AND (salida_existente > entrada_nueva)
+    conflict_query = select(Reserva).where(
+        Reserva.propiedad_id == data.propiedad_id,
+        Reserva.estado == EstadoReserva.CONFIRMADA,
+        Reserva.check_in < data.check_out,
+        Reserva.check_out > data.check_in
+    )
+    conflict_result = await db.execute(conflict_query)
+    conflict = conflict_result.scalars().first()
+    
+    if conflict:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Fechas ocupadas. Conflicto con: {conflict.nombre_huesped} ({conflict.check_in} al {conflict.check_out})."
+        )
+
     reserva = Reserva(**data.model_dump())
     db.add(reserva)
     await db.flush()
@@ -117,6 +177,38 @@ async def actualizar_reserva(
     reserva = result.scalar_one_or_none()
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
+
+    if reserva.fuente != FuenteReserva.MANUAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Solo se pueden editar reservas creadas manualmente. Las de plataforma se gestionan vía iCal."
+        )
+
+    # Validar fechas si se están cambiando
+    new_in = data.check_in if data.check_in else reserva.check_in
+    new_out = data.check_out if data.check_out else reserva.check_out
+    
+    if new_out <= new_in:
+        raise HTTPException(status_code=400, detail="check_out debe ser posterior a check_in")
+
+    # Validar solapamiento (Overbooking) excluyendo esta misma reserva
+    # Solo validar si el estado es CONFIRMADA o está pasando a CONFIRMADA
+    nuevo_estado = data.estado if data.estado else reserva.estado
+    if nuevo_estado == EstadoReserva.CONFIRMADA:
+        conflict_query = select(Reserva).where(
+            Reserva.id != reserva.id,
+            Reserva.propiedad_id == reserva.propiedad_id,
+            Reserva.estado == EstadoReserva.CONFIRMADA,
+            Reserva.check_in < new_out,
+            Reserva.check_out > new_in
+        )
+        conflict_result = await db.execute(conflict_query)
+        conflict = conflict_result.scalars().first()
+        if conflict:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Fechas ocupadas. Conflicto con: {conflict.nombre_huesped} ({conflict.check_in} al {conflict.check_out})."
+            )
 
     update_data = data.model_dump(exclude_unset=True)
     estado_viejo = reserva.estado
@@ -149,6 +241,12 @@ async def cancelar_reserva(
     reserva = result.scalar_one_or_none()
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
+
+    if reserva.fuente != "MANUAL":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Solo se pueden cancelar reservas manuales. Las de plataforma se gestionan vía iCal."
+        )
 
     reserva.estado = "CANCELADA"
     await db.flush()

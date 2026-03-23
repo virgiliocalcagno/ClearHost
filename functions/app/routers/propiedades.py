@@ -5,15 +5,16 @@ Router de Propiedades — CRUD completo.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.propiedad import Propiedad
 from app.schemas.propiedad import PropiedadCreate, PropiedadUpdate, PropiedadResponse
 
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_role
 from app.models.usuario_staff import UsuarioStaff, RolStaff
 
-router = APIRouter(prefix="/propiedades", tags=["Propiedades"])
+router = APIRouter(prefix="/propiedades", tags=["Propiedades"], redirect_slashes=False)
 
 
 
@@ -26,7 +27,10 @@ async def listar_propiedades(
     current_user: UsuarioStaff = Depends(get_current_user),
 ):
     """Listar todas las propiedades con filtros opcionales y restricción por zona."""
-    query = select(Propiedad)
+    query = select(Propiedad).options(
+        selectinload(Propiedad.propietario),
+        selectinload(Propiedad.zona)
+    )
     
     # ── Segregación por Zona (Manager Local) ──
     if current_user.rol == RolStaff.MANAGER_LOCAL:
@@ -48,7 +52,13 @@ async def listar_propiedades(
         
     query = query.order_by(Propiedad.nombre)
     result = await db.execute(query)
-    return result.scalars().all()
+    properties = result.scalars().all()
+    for p in properties:
+        if p.propietario:
+            p.propietario_nombre = p.propietario.nombre
+        if p.zona:
+            p.zona_nombre = p.zona.nombre
+    return properties
 
 
 
@@ -60,7 +70,10 @@ async def obtener_propiedad(
 ):
     """Obtener una propiedad por su ID con muro de privacidad."""
     result = await db.execute(
-        select(Propiedad).where(Propiedad.id == str(propiedad_id))
+        select(Propiedad).options(
+            selectinload(Propiedad.propietario),
+            selectinload(Propiedad.zona)
+        ).where(Propiedad.id == str(propiedad_id))
     )
     propiedad = result.scalar_one_or_none()
     if not propiedad:
@@ -70,6 +83,12 @@ async def obtener_propiedad(
     if current_user.rol == RolStaff.STAFF:
         propiedad.cobro_propietario = 0.0  # Ocultar ingresos
         propiedad.notas = "Información restringida"
+    
+    # Enriquecer nombres para el frontend
+    if propiedad.propietario:
+        propiedad.propietario_nombre = propiedad.propietario.nombre
+    if propiedad.zona:
+        propiedad.zona_nombre = propiedad.zona.nombre
         
     return propiedad
 
@@ -78,6 +97,7 @@ async def obtener_propiedad(
 async def crear_propiedad(
     data: PropiedadCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(require_role([RolStaff.SUPER_ADMIN, RolStaff.MANAGER_LOCAL]))
 ):
     """Crear una nueva propiedad."""
     propiedad = Propiedad(**data.model_dump())
@@ -92,6 +112,7 @@ async def actualizar_propiedad(
     propiedad_id: str,
     data: PropiedadUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(require_role([RolStaff.SUPER_ADMIN, RolStaff.MANAGER_LOCAL]))
 ):
     """Actualizar una propiedad existente."""
     result = await db.execute(
@@ -103,10 +124,20 @@ async def actualizar_propiedad(
 
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
+        # Limpiar strings vacíos en FKs
+        if field in ["propietario_id", "zona_id", "manager_id"] and value == "":
+            value = None
         setattr(propiedad, field, value)
 
     await db.flush()
-    await db.refresh(propiedad)
+    await db.refresh(propiedad, ["propietario", "zona"])
+
+    # Enriquecer nombres para el frontend
+    if propiedad.propietario:
+        propiedad.propietario_nombre = propiedad.propietario.nombre
+    if propiedad.zona:
+        propiedad.zona_nombre = propiedad.zona.nombre
+
     return propiedad
 
 
@@ -114,6 +145,7 @@ async def actualizar_propiedad(
 async def eliminar_propiedad(
     propiedad_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(require_role([RolStaff.SUPER_ADMIN]))
 ):
     """Eliminar (desactivar) una propiedad."""
     result = await db.execute(

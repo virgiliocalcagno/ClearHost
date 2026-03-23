@@ -68,6 +68,7 @@ async def listar_tareas(
     fecha: date | None = None,
     estado: str | None = None,
     asignado_a: UUID | None = None,
+    id_secuencial: int | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: UsuarioStaff = Depends(get_current_user),
 ):
@@ -87,6 +88,13 @@ async def listar_tareas(
             return []
     # SUPER_ADMIN sigue viendo todo por defecto
     
+    # ── Filtrado por Estado de Reserva ──
+    # Solo mostrar tareas de reservas CONFIRMADAS o tareas manuales (sin reserva)
+    from app.models.reserva import Reserva, EstadoReserva
+    query = query.outerjoin(Reserva).where(
+        (TareaOperativa.reserva_id == None) | (Reserva.estado == EstadoReserva.CONFIRMADA)
+    )
+    
     # ── Filtros del usuario ──
     if fecha:
         query = query.where(TareaOperativa.fecha_programada == fecha)
@@ -94,6 +102,8 @@ async def listar_tareas(
         query = query.where(TareaOperativa.estado == estado)
     if asignado_a and current_user.rol != RolStaff.STAFF:
         query = query.where(TareaOperativa.asignado_a == str(asignado_a))
+    if id_secuencial:
+        query = query.where(TareaOperativa.id_secuencial == id_secuencial)
         
     query = query.order_by(TareaOperativa.fecha_programada, TareaOperativa.hora_inicio)
 
@@ -108,10 +118,28 @@ async def listar_tareas(
             tarea_dict["direccion_propiedad"] = tarea.propiedad.direccion
         if tarea.reserva:
             tarea_dict["nombre_huesped"] = tarea.reserva.nombre_huesped
+            tarea_dict["fuente_reserva"] = tarea.reserva.fuente.value if tarea.reserva.fuente else "MANUAL"
             tarea_dict["check_in"] = tarea.reserva.check_in
             tarea_dict["check_out"] = tarea.reserva.check_out
+        else:
+            tarea_dict["fuente_reserva"] = "ADMIN"
         if tarea.asignado:
             tarea_dict["nombre_asignado"] = tarea.asignado.nombre
+        # Calcular progreso
+        if tarea.estado in (EstadoTarea.CLEAN_AND_READY, EstadoTarea.VERIFICADA):
+            tarea_dict["progreso"] = 100.0
+        elif tarea.checklist:
+            total = len(tarea.checklist)
+            completados = len([i for i in tarea.checklist if i.get("completado")])
+            prog_calc = round((completados / total) * 100, 1) if total > 0 else 0.0
+            # Si todas están marcadas pero no se ha confirmado estado final, dejamos en 95% para evitar confusión
+            if prog_calc >= 100 and tarea.estado not in (EstadoTarea.CLEAN_AND_READY, EstadoTarea.VERIFICADA):
+                tarea_dict["progreso"] = 95.0
+            else:
+                tarea_dict["progreso"] = prog_calc
+        else:
+            tarea_dict["progreso"] = 0.0
+
         if tarea.estado not in (EstadoTarea.CLEAN_AND_READY, EstadoTarea.VERIFICADA):
             ahora = datetime.utcnow()
             t_hora = tarea.hora_inicio if tarea.hora_inicio else time(11, 0)
@@ -139,10 +167,14 @@ async def tareas_de_hoy(
 ):
     """Obtener tareas del día actual para un miembro del staff (pantalla principal app)."""
     hoy = date.today()
+    from app.models.reserva import Reserva, EstadoReserva
     result = await db.execute(
-        select(TareaOperativa).where(
+        select(TareaOperativa)
+        .outerjoin(Reserva)
+        .where(
             TareaOperativa.asignado_a == str(staff_id),
             TareaOperativa.fecha_programada == hoy,
+            (TareaOperativa.reserva_id == None) | (Reserva.estado == EstadoReserva.CONFIRMADA)
         ).order_by(TareaOperativa.hora_inicio)
     )
     tareas = result.scalars().all()
@@ -156,8 +188,11 @@ async def tareas_de_hoy(
             tarea_dict["direccion_propiedad"] = tarea.propiedad.direccion
         if tarea.reserva:
             tarea_dict["nombre_huesped"] = tarea.reserva.nombre_huesped
+            tarea_dict["fuente_reserva"] = tarea.reserva.fuente.value if tarea.reserva.fuente else "MANUAL"
             tarea_dict["check_in"] = tarea.reserva.check_in
             tarea_dict["check_out"] = tarea.reserva.check_out
+        else:
+            tarea_dict["fuente_reserva"] = "ADMIN"
         tareas_detalladas.append(TareaConDetalles(**tarea_dict))
 
     return tareas_detalladas
@@ -192,8 +227,17 @@ async def crear_tarea(
     data: TareaCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Crear una tarea operativa con prioridad visual (semáforo)."""
-    tarea = TareaOperativa(**data.model_dump())
+    # Heredar tarifario de la propiedad si no se envía
+    prop_result = await db.execute(select(Propiedad).where(Propiedad.id == data.propiedad_id))
+    prop = prop_result.scalar_one_or_none()
+    
+    tarea_data = data.model_dump()
+    if prop:
+        if not tarea_data.get("pago_al_staff") or tarea_data["pago_al_staff"] == 0:
+            tarea_data["pago_al_staff"] = prop.pago_staff
+            tarea_data["moneda_tarea"] = prop.moneda_pago
+
+    tarea = TareaOperativa(**tarea_data)
     
     # Calcular semáforo de prioridad (simplificado: si es hoy -> Emergencia, mañana -> Media, +1 -> Baja)
     hoy = date.today()
@@ -246,6 +290,13 @@ async def actualizar_tarea(
     tarea = result.scalar_one_or_none()
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
+
+    # Protección: No permitir editar tareas que vienen de iCal (AIRBNB, BOOKING, etc)
+    if tarea.reserva and tarea.reserva.fuente.value != "MANUAL":
+        raise HTTPException(
+            status_code=403, 
+            detail=f"No se puede editar tareas de {tarea.reserva.fuente.value}. Solo tareas manuales."
+        )
 
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -645,7 +696,8 @@ async def verificar_tarea(
     return tarea
 
 
-@router.post("/{tarea_id}/whatsapp-link")
+@router.api_route("/{tarea_id}/whatsapp-link", methods=["GET", "POST"])
+@router.api_route("/{tarea_id}/whatsapp", methods=["GET", "POST"])
 async def generar_link_whatsapp(
     tarea_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -667,33 +719,115 @@ async def generar_link_whatsapp(
     staff = tarea.asignado
     propiedad = tarea.propiedad
     
-    frontend_url = "https://clearhost-c8919.web.app" # URL de la web
-    link_tarea = f"{frontend_url}/app/tarea/{tarea.id}"
-    
-    mensaje = (
-        f"Hola {staff.nombre.split()[0]}! 👋\n\n"
-        f"Tienes una nueva tarea de limpieza:\n"
-        f"🏠 *Propiedad:* {propiedad.nombre}\n"
-        f"📅 *Día:* {tarea.fecha_programada}\n"
-        f"🕒 *Check-out:* {tarea.hora_inicio.strftime('%H:%M') if tarea.hora_inicio else '11:00'}\n"
-        f"👤 *Huésped:* {tarea.reserva.nombre_huesped if tarea.reserva else 'N/A'}\n\n"
-        f"Ver detalles y confirmar aquí:\n{link_tarea}"
-    )
-    
-    import urllib.parse
-    mensaje_encoded = urllib.parse.quote(mensaje)
-    
     # Limpiar teléfono (quitar espacios, +, etc. si es necesario para wa.me)
     tel = staff.telefono or ""
     tel_clean = "".join(filter(str.isdigit, tel))
     
-    whatsapp_url = f"https://wa.me/{tel_clean}?text={mensaje_encoded}"
+    if tarea.estado in [EstadoTarea.PENDIENTE, EstadoTarea.ASIGNADA_NO_CONFIRMADA]:
+        frontend_url = "https://clearhost-c8919.web.app" # URL de la web
+        link_tarea = f"{frontend_url}/app/tarea/{tarea.id}/confirmar"
+        
+        id_label = f"T-{tarea.id_secuencial}" if tarea.id_secuencial else "Nueva Tarea"
+        
+        mensaje = (
+            f"Hola {staff.nombre.split()[0]}! 👋\n\n"
+            f"Tienes una nueva tarea asignada: *{id_label}*\n"
+            f"🏠 *Propiedad:* {propiedad.nombre}\n"
+            f"📅 *Día:* {tarea.fecha_programada.strftime('%d/%m/%Y') if hasattr(tarea.fecha_programada, 'strftime') else tarea.fecha_programada}\n"
+            f"🕒 *Check-out:* {tarea.hora_inicio.strftime('%H:%M') if tarea.hora_inicio else '11:00'}\n"
+            f"👤 *Huésped:* {tarea.reserva.nombre_huesped if tarea.reserva else 'N/A'}\n\n"
+            f"Por favor, confírmala aquí:\n{link_tarea}"
+        )
+        import urllib.parse
+        mensaje_encoded = urllib.parse.quote(mensaje)
+        whatsapp_url = f"https://wa.me/{tel_clean}?text={mensaje_encoded}"
+        res_msg = "Link de WhatsApp con confirmación generado"
+    else:
+        whatsapp_url = f"https://wa.me/{tel_clean}"
+        mensaje = None
+        res_msg = "Link de WhatsApp (chat directo) generado"
     
     return {
-        "message": "Link de WhatsApp generado",
+        "message": res_msg,
         "link": whatsapp_url,
         "whatsapp_template": mensaje
     }
+
+@router.get("/public/{tarea_id}")
+async def get_tarea_publica(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Obtener info básica de una tarea sin auth (para el link de WhatsApp)."""
+    result = await db.execute(
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
+    )
+    tarea = result.scalar_one_or_none()
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    return {
+        "id": tarea.id,
+        "id_secuencial": tarea.id_secuencial,
+        "tipo_tarea": tarea.tipo_tarea,
+        "fecha_programada": tarea.fecha_programada,
+        "hora_inicio": tarea.hora_inicio.strftime("%H:%M") if tarea.hora_inicio else "11:00",
+        "nombre_propiedad": tarea.propiedad.nombre if tarea.propiedad else "N/A",
+        "nombre_huesped": tarea.reserva.nombre_huesped if tarea.reserva else None,
+        "estado": tarea.estado
+    }
+
+@router.put("/public/{tarea_id}/aceptar")
+async def aceptar_tarea_publica(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Aceptar tarea desde el link público."""
+    result = await db.execute(
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
+    )
+    tarea = result.scalar_one_or_none()
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    if tarea.estado not in (EstadoTarea.PENDIENTE, EstadoTarea.ASIGNADA_NO_CONFIRMADA):
+         # Si ya está aceptada o en progreso, no dar error, solo devolver éxito
+         return {"message": "Tarea ya estaba aceptada o en proceso"}
+
+    tarea.estado = EstadoTarea.ACEPTADA
+    await db.flush()
+    
+    # Sync real-time
+    if tarea.asignado_a:
+        trigger_sync(tarea.asignado_a)
+    trigger_sync_global()
+    
+    return {"message": "Tarea aceptada con éxito"}
+
+@router.put("/public/{tarea_id}/rechazar")
+async def rechazar_tarea_publica(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Rechazar (desasignar) tarea desde el link público."""
+    result = await db.execute(
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
+    )
+    tarea = result.scalar_one_or_none()
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    # Al rechazar, vuelve a PENDIENTE y se quita el asignado
+    tarea.estado = EstadoTarea.PENDIENTE
+    old_staff_id = tarea.asignado_a
+    tarea.asignado_a = None
+    await db.flush()
+    
+    if old_staff_id:
+        trigger_sync(old_staff_id)
+    trigger_sync_global()
+    
+    return {"message": "Tarea rechazada y devuelta a la bolsa"}
 
 @router.put("/{tarea_id}/aceptar", response_model=TareaResponse)
 async def aceptar_tarea(
@@ -718,3 +852,36 @@ async def aceptar_tarea(
     await db.flush()
     await db.refresh(tarea)
     return tarea
+
+@router.delete("/{tarea_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_tarea(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: UsuarioStaff = Depends(get_current_user),
+):
+    """Eliminar físicamente una tarea operativa."""
+    result = await db.execute(
+        select(TareaOperativa).where(TareaOperativa.id == str(tarea_id))
+    )
+    tarea = result.scalar_one_or_none()
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+
+    # Protección: No permitir borrar tareas de plataformas
+    if tarea.reserva and tarea.reserva.fuente.value != "MANUAL":
+        raise HTTPException(
+            status_code=403, 
+            detail=f"No se puede eliminar tareas de {tarea.reserva.fuente.value}."
+        )
+
+    # Guardar ID del asignado para sync después del borrado
+    staff_id = tarea.asignado_a
+
+    await db.delete(tarea)
+    await db.flush()
+    
+    # Real-time sync update
+    if staff_id: trigger_sync(staff_id)
+    else: trigger_sync_global()
+    
+    return None

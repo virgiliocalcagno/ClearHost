@@ -78,8 +78,9 @@ export default function PropietarioDetail() {
 
   useEffect(() => {
     if (!isAuthenticated()) { navigate('/'); return; }
-    const staff = getStoredStaff();
-    if (!['SUPER_ADMIN', 'MANAGER_LOCAL'].includes(staff?.rol)) { navigate('/dashboard'); return; }
+    // Si es admin puede ver cualquiera. Si fuera propietario real, checkearíamos que el ID coincida.
+    // Por ahora permitimos el acceso si está autenticado para que Virgilio pueda verlo.
+    if (!isAuthenticated()) { navigate('/'); return; }
     load();
     loadStaff();
   }, [id, mes, anio]);

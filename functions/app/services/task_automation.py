@@ -132,6 +132,8 @@ async def crear_tarea_para_reserva(reserva_id: str):
                 requiere_lavado_ropa=True,
             )
             db.add(tarea)
+            await db.flush()
+            await db.refresh(tarea)
             await db.commit()
 
             logger.info(
@@ -181,7 +183,17 @@ async def check_assignment_timeouts():
                             {"tipo": "ALERTA_TIMEOUT", "tarea_id": tarea.id}
                         )
                 
-                admins_res = await db.execute(select(UsuarioStaff).where(UsuarioStaff.rol == RolStaff.SUPER_ADMIN))
+                # Notificar a SUPER_ADMIN y al MANAGER_LOCAL de la zona de la propiedad
+                from sqlalchemy import or_
+                admins_res = await db.execute(
+                    select(UsuarioStaff).where(
+                        (UsuarioStaff.fcm_token.isnot(None)) &
+                        (
+                            (UsuarioStaff.rol == RolStaff.SUPER_ADMIN) |
+                            ((UsuarioStaff.rol == RolStaff.MANAGER_LOCAL) & (UsuarioStaff.zona_id == propiedad.zona_id if propiedad else None))
+                        )
+                    )
+                )
                 admins = admins_res.scalars().all()
                 for admin in admins:
                     if admin.fcm_token:

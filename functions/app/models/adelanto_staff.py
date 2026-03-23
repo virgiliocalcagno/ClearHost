@@ -16,7 +16,7 @@ class AdelantoStaff(Base):
     )
     
     monto: Mapped[float] = mapped_column(Float, nullable=False)
-    moneda: Mapped[str] = mapped_column(String(10), default="MXN")
+    moneda: Mapped[str] = mapped_column(String(10), default="DOP")
     fecha: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     notas: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
