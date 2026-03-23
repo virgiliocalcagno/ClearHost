@@ -147,6 +147,12 @@ export default function PropiedadesView({ data, propietarios, onAction, onRefres
                         <span className="admin-badge admin-badge-neutral" style={{ textAlign: 'center' }}>Sin Import</span>
                       )}
                       
+                      {p.ical_url && (
+                        <div style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', marginTop: '-2px', marginBottom: '4px' }}>
+                          Última: {p.ultima_sincronizacion_ical ? new Date(p.ultima_sincronizacion_ical).toLocaleString() : 'Nunca'}
+                        </div>
+                      )}
+                      
                       <button 
                         className="btn-admin btn-admin-outline btn-admin-sm"
                         onClick={() => copyToClipboard(`https://clearhost-c8919.web.app/api/reservas/ical/export/${p.id}`)}

@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import api from '../services/api';
 import { EstadoReservaBadge, FuenteBadge } from '../components/AdminCommon';
+import GanttReservas from '../components/GanttReservas';
 
 const cancelarReserva = (id) => api.delete(`/reservas/${id}`);
 const reactivarReserva = (id) => api.put(`/reservas/${id}`, { estado: 'CONFIRMADA' });
 
 export default function ReservasView({ data, propiedades, onAction, onRefresh, showToast }) {
+  const [filtroPropiedad, setFiltroPropiedad] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('Todas');
+
+  const [vistaActiva, setVistaActiva] = useState('tabla');
+
+  const nombresPropiedades = [...new Set(data.map(r => {
+    const p = propiedades.find(prop => prop.id === r.propiedad_id);
+    return p?.nombre;
+  }).filter(Boolean))];
+
+  const filteredData = data.filter(r => {
+    const prop = propiedades.find(p => p.id === r.propiedad_id);
+    const matchesProp = !filtroPropiedad || prop?.nombre === filtroPropiedad;
+    const matchesEstado = filtroEstado === 'Todas' || r.estado === filtroEstado;
+    return matchesProp && matchesEstado;
+  });
+
   return (
     <div className="admin-fade-in">
       <div className="admin-topbar">
@@ -14,24 +32,54 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
           <div className="topbar-subtitle">Reservaciones de huéspedes</div>
         </div>
         <div className="topbar-actions">
-          <button className="btn-admin btn-admin-primary" onClick={() => onAction({ type: 'reserva' })}>
+          <div className="view-toggle" style={{display: 'inline-flex', gap: 5, marginRight: 15, background: 'var(--surface)', padding: 4, borderRadius: 8, boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)'}}>
+            <button className={`btn-admin btn-admin-sm ${vistaActiva === 'tabla' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVistaActiva('tabla')} style={{border: 'none'}}>📋 Listado</button>
+            <button className={`btn-admin btn-admin-sm ${vistaActiva === 'calendario' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVistaActiva('calendario')} style={{border: 'none'}}>📊 Cronograma (Gantt)</button>
+          </div>
+          <button className="btn-admin btn-admin-primary" style={{marginRight: 10}} onClick={() => onAction({ type: 'reserva' })}>
             ＋ Nueva Reserva
           </button>
+          <button className="btn-admin btn-admin-outline" onClick={onRefresh}>🔄 Actualizar</button>
         </div>
       </div>
 
       <div className="admin-table-wrapper">
         <div className="admin-table-header">
-          <h3>Listado de Reservas</h3>
-          <span className="table-count">{data.length} reservas</span>
+          <h3>{vistaActiva === 'tabla' ? 'Listado de Reservas' : 'Ocupación de Propiedades'}</h3>
+          <span className="table-count">{filteredData.length} de {data.length} reservas</span>
         </div>
-        {data.length === 0 ? (
+
+        <div className="filter-bar" style={{ display: 'flex', gap: '15px', padding: '15px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <select 
+            className="select-field select-field-sm" 
+            value={filtroPropiedad} 
+            onChange={e => setFiltroPropiedad(e.target.value)}
+          >
+            <option value="">Todas las propiedades</option>
+            {nombresPropiedades.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+
+          <select 
+            className="select-field select-field-sm" 
+            value={filtroEstado} 
+            onChange={e => setFiltroEstado(e.target.value)}
+          >
+            <option value="Todas">Todos los estados</option>
+            <option value="CONFIRMADA">CONFIRMADA</option>
+            <option value="CANCELADA">CANCELADA</option>
+            <option value="COMPLETADA">COMPLETADA</option>
+          </select>
+        </div>
+
+        {filteredData.length === 0 ? (
           <div className="admin-empty">
             <div className="empty-icon">📅</div>
-            <h4>Sin reservas</h4>
-            <p>Las reservas aparecerán aquí al crearlas o sincronizar iCal.</p>
+            <h4>Sin resultados</h4>
+            <p>No hay reservas que coincidan con los filtros aplicados.</p>
           </div>
-        ) : (
+        ) : vistaActiva === 'tabla' ? (
           <table className="admin-table">
             <thead>
               <tr>
@@ -45,9 +93,8 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
               </tr>
             </thead>
             <tbody>
-              {data.map(r => {
+              {filteredData.map(r => {
                 const prop = propiedades.find(p => p.id === r.propiedad_id);
-                // Colores de fila según estado para "Wow" factor
                 const rowStyle = r.estado === 'CANCELADA' ? { opacity: 0.6, backgroundColor: '#FEF2F2' } : 
                                 r.estado === 'COMPLETADA' ? { backgroundColor: '#F8FAFC' } : {};
                 
@@ -105,6 +152,8 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
               })}
             </tbody>
           </table>
+        ) : (
+          <GanttReservas data={filteredData} propiedades={propiedades} />
         )}
       </div>
     </div>

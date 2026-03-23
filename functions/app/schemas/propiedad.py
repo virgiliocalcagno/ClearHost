@@ -64,6 +64,7 @@ class PropiedadResponse(BaseModel):
     num_habitaciones: int
     ical_url: Optional[str] = None
     ical_last_sync: Optional[datetime] = None
+    ultima_sincronizacion_ical: Optional[datetime] = None
     checklist_template: Optional[list] = None
     activos_inventario: Optional[list] = None
     notas: Optional[str] = None

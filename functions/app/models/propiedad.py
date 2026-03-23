@@ -110,6 +110,7 @@ class Propiedad(Base):
     # ── iCal / Sincronización ──
     ical_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     ical_last_sync: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ultima_sincronizacion_ical: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, comment="Log de auditoría de última sincronización exitosa")
 
     # ── Checklist default para esta propiedad ──
     checklist_template: Mapped[dict | None] = mapped_column(

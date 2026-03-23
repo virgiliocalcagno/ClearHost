@@ -193,7 +193,9 @@ async def sync_property_ical(propiedad_id: str):
                         logger.info(f"Reserva cancelada en origen (no está en iCal): {uid}")
 
             # Actualizar timestamp de última sincronización
-            propiedad.ical_last_sync = datetime.utcnow()
+            now = datetime.utcnow()
+            propiedad.ical_last_sync = now
+            propiedad.ultima_sincronizacion_ical = now
             await db.commit()
             logger.info(
                 f"Sync completada para {propiedad.nombre}: "

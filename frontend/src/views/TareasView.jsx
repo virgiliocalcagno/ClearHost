@@ -215,7 +215,7 @@ export default function TareasView({ data, propiedades, staffList, onAction, onR
                         )}
                         <button
                           className="btn-admin btn-admin-sm"
-                          style={{background:'#25D366', color:'white', border:'none', marginLeft:5}}
+                          style={{background:'var(--primary)', color:'white', border:'none', marginLeft:5}}
                           onClick={() => handleWhatsApp(t.id)}
                           title="Enviar a WhatsApp"
                         >

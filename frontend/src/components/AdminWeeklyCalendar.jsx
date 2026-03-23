@@ -323,7 +323,7 @@ export default function AdminWeeklyCalendar({
                                 handleWhatsApp(t.id);
                               }}
                               style={{ 
-                                background: '#22C55E', 
+                                background: 'var(--primary)', 
                                 color:'white', 
                                 border:'none', 
                                 padding:'8px', 
