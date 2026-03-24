@@ -9,6 +9,7 @@ const reactivarReserva = (id) => api.put(`/reservas/${id}`, { estado: 'CONFIRMAD
 export default function ReservasView({ data, propiedades, onAction, onRefresh, showToast }) {
   const [filtroPropiedad, setFiltroPropiedad] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todas');
+  const [filtroFuente, setFiltroFuente] = useState('Todas');
 
   const [vistaActiva, setVistaActiva] = useState('calendario');
 
@@ -21,7 +22,8 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
     const prop = propiedades.find(p => p.id === r.propiedad_id);
     const matchesProp = !filtroPropiedad || prop?.nombre === filtroPropiedad;
     const matchesEstado = filtroEstado === 'Todas' || r.estado === filtroEstado;
-    return matchesProp && matchesEstado;
+    const matchesFuente = filtroFuente === 'Todas' || r.fuente === filtroFuente;
+    return matchesProp && matchesEstado && matchesFuente;
   });
 
   return (
@@ -70,6 +72,19 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
             <option value="CONFIRMADA">CONFIRMADA</option>
             <option value="CANCELADA">CANCELADA</option>
             <option value="COMPLETADA">COMPLETADA</option>
+          </select>
+
+          <select 
+            className="select-field select-field-sm" 
+            value={filtroFuente} 
+            onChange={e => setFiltroFuente(e.target.value)}
+          >
+            <option value="Todas">Todas las fuentes</option>
+            <option value="AIRBNB">AIRBNB</option>
+            <option value="BOOKING">BOOKING</option>
+            <option value="VRBO">VRBO</option>
+            <option value="MANUAL">MANUAL</option>
+            <option value="OTRO">OTRO</option>
           </select>
         </div>
 
