@@ -95,6 +95,29 @@ const AdminPanel = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Sincronización Real-Time vía WebSockets
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.host.includes('localhost') 
+      ? 'localhost:8000' 
+      : 'backend-3bjrskykwq-uc.a.run.app';
+      
+    const ws = new WebSocket(`${protocol}//${wsHost}/ws/actualizaciones`);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.evento === 'recargar_datos') {
+          console.log("⚡ Cambio detectado en servidor. Recargando...");
+          fetchData();
+        }
+      } catch (err) {
+        // En caso de mensaje plano
+        if (event.data.includes('recargar_datos')) fetchData();
+      }
+    };
+
+    return () => ws.close();
   }, []);
 
   const handleSave = async (formData) => {
@@ -136,7 +159,14 @@ const AdminPanel = () => {
       }
       
       setModal({ show: false, type: '', edit: null });
-      fetchData();
+
+      // Si es una reserva nueva, esperamos un breve momento (800ms) para que el BackgroundTask 
+      // del backend persista la tarea de limpieza antes de recargar los datos.
+      if (!modal.edit && modal.type === 'reserva') {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      await fetchData();
     } catch (error) {
       const detail = error.response?.data?.detail;
       const errorMsg = typeof detail === 'object' ? JSON.stringify(detail, null, 2) : (detail || error.message || "Error al guardar");

@@ -141,6 +141,10 @@ async def crear_tarea_para_reserva(reserva_id: str):
                 f"con pago de ${tarea.pago_al_staff} {tarea.moneda_tarea}."
             )
 
+            # Notificar Real-Time si hay clientes conectados (Web, App)
+            from app.utils.websocket_manager import manager
+            await manager.broadcast('{"evento": "nueva_tarea"}')
+
         except Exception as e:
             await db.rollback()
             logger.error(f"Error creando tarea para reserva {reserva_id}: {e}")

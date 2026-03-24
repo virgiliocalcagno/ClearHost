@@ -13,6 +13,7 @@ from app.database import AsyncSessionLocal
 from app.models.propiedad import Propiedad
 from app.models.reserva import Reserva, FuenteReserva, EstadoReserva
 from app.config import get_settings
+from app.utils.websocket_manager import manager
 
 from sqlalchemy import select
 
@@ -201,6 +202,9 @@ async def sync_property_ical(propiedad_id: str):
                 f"Sync completada para {propiedad.nombre}: "
                 f"{nuevas_reservas} nuevas/reactivadas reservas"
             )
+
+            # Notificar al frontend vía WebSocket para recarga silenciosa
+            await manager.broadcast('{"evento": "nueva_tarea"}')
 
         except Exception as e:
             await db.rollback()

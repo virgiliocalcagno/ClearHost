@@ -10,7 +10,7 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
   const [filtroPropiedad, setFiltroPropiedad] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todas');
 
-  const [vistaActiva, setVistaActiva] = useState('tabla');
+  const [vistaActiva, setVistaActiva] = useState('calendario');
 
   const nombresPropiedades = [...new Set(data.map(r => {
     const p = propiedades.find(prop => prop.id === r.propiedad_id);

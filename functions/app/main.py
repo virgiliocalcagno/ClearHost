@@ -13,6 +13,8 @@ from app.config import get_settings
 from app.database import init_db
 from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios, zonas, gastos
 from app.services.scheduler import setup_scheduler, shutdown_scheduler
+from app.utils.websocket_manager import manager
+from fastapi import WebSocket
 
 # Configurar logging
 logging.basicConfig(
@@ -143,6 +145,18 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.websocket("/ws/tareas")
+async def websocket_tareas_endpoint(websocket: WebSocket):
+    """Endpoint para notificaciones de nuevas tareas en tiempo real."""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Mantener la conexión abierta
+            await websocket.receive_text()
+    except Exception:
+        manager.disconnect(websocket)
 
 
 @app.post("/api/sync-ical-all")
