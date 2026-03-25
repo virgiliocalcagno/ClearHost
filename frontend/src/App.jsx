@@ -14,6 +14,7 @@ import RecuperarPassword from './pages/RecuperarPassword';
 import AprobarReparacion from './pages/AprobarReparacion';
 import PropietarioDetail from './pages/PropietarioDetail';
 import TareaConfirmar from './pages/TareaConfirmar';
+import AdminPanel_V2 from './pages/AdminPanel_V2';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminViewSwitcher /></AdminRoute>} />
+        <Route path="/admin-v2" element={<AdminRoute><AdminPanel_V2 /></AdminRoute>} />
         <Route path="/propietario/:id/dashboard" element={<ProtectedRoute><PropietarioDetail /></ProtectedRoute>} />
         <Route path="/admin/propietarios/:id" element={<AdminRoute><PropietarioDetail /></AdminRoute>} />
         <Route path="/tarea/:id" element={<ProtectedRoute><TareaDetalle /></ProtectedRoute>} />
