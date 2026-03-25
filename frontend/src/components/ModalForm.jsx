@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
 
 export default function ModalForm({ 
   show, 
@@ -12,6 +13,39 @@ export default function ModalForm({
   staffList = [] 
 }) {
   const [formData, setFormData] = useState({});
+  const [escaneando, setEscaneando] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleScanDocument = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setEscaneando(true);
+    const formDataOCR = new FormData();
+    formDataOCR.append('file', file);
+
+    try {
+      const res = await api.post('/ocr/escanear-documento', formDataOCR, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const { documento_identidad, nacionalidad, nombre_huesped } = res.data;
+      
+      setFormData(prev => ({
+        ...prev,
+        nombre_huesped: nombre_huesped || prev.nombre_huesped,
+        documento_identidad: documento_identidad || prev.documento_identidad,
+        nacionalidad: nacionalidad || prev.nacionalidad
+      }));
+      
+    } catch (err) {
+      console.error("Error en OCR:", err);
+      alert("No se pudo escanear el documento.");
+    } finally {
+      setEscaneando(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     if (editData) {
@@ -121,6 +155,55 @@ export default function ModalForm({
       case 'reserva':
         return (
           <>
+            {/* Escaneo de Identidad (OCR) */}
+            <div style={{ 
+              marginBottom: '20px', 
+              padding: '16px', 
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', 
+              borderRadius: '16px', 
+              border: '1px solid #bae6fd', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: 0, color: '#0369a1', fontSize: '13px', fontWeight: 800 }}>✨ Sincronización Inteligente</h4>
+                <p style={{ margin: 0, fontSize: '11px', color: '#075985', opacity: 0.8 }}>Escanea el ID/Pasaporte para auto-completar</p>
+              </div>
+              
+              <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  ref={fileInputRef} 
+                  style={{ display: 'none' }} 
+                  onChange={handleScanDocument} 
+              />
+              
+              <button 
+                  type="button"
+                  disabled={escaneando}
+                  onClick={() => fileInputRef.current.click()}
+                  style={{ 
+                    background: '#0284c7', 
+                    color: 'white', 
+                    border: 'none', 
+                    padding: '10px 16px',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(2,132,199,0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+              >
+                  {escaneando ? '⌛ PROCESANDO...' : '📷 ESCANEAR ID'}
+              </button>
+            </div>
             <div className="form-group">
               <label>Propiedad</label>
               <select name="propiedad_id" value={formData.propiedad_id || ''} onChange={handleChange} required className="select-field">
@@ -128,9 +211,20 @@ export default function ModalForm({
                 {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </div>
-            <div className="form-group">
-               <label>Nombre del Huésped</label>
-               <input name="nombre_huesped" value={formData.nombre_huesped || ''} onChange={handleChange} required className="input-field" />
+            <div className="form-group focus-within:ring-2 focus-within:ring-teal-500/20 transition-all">
+                <label>Nombre del Huésped</label>
+                <input name="nombre_huesped" value={formData.nombre_huesped || ''} onChange={handleChange} required className="input-field" placeholder="Nombre completo..." />
+            </div>
+
+            <div className="form-grid" style={{ marginBottom: '15px' }}>
+              <div className="form-group">
+                <label>Doc. Identidad</label>
+                <input name="documento_identidad" value={formData.documento_identidad || ''} onChange={handleChange} className="input-field" placeholder="ID o Pasaporte" />
+              </div>
+              <div className="form-group">
+                <label>Nacionalidad</label>
+                <input name="nacionalidad" value={formData.nacionalidad || ''} onChange={handleChange} className="input-field" placeholder="Ej: DOM, ESP" />
+              </div>
             </div>
             <div className="form-grid">
               <div className="form-group">

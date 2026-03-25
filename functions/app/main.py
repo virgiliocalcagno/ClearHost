@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios, zonas, gastos
+from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios, zonas, gastos, ocr
 from app.services.scheduler import setup_scheduler, shutdown_scheduler
 from app.utils.websocket_manager import manager
 from fastapi import WebSocket
@@ -129,6 +129,7 @@ app.include_router(tareas.router, prefix="/api")
 app.include_router(incidencias.router, prefix="/api")
 app.include_router(propietarios.router, prefix="/api")
 app.include_router(gastos.router, prefix="/api")
+app.include_router(ocr.router)
 app.include_router(zonas.router)  # ya tiene prefix /api/zonas internamente
 
 
@@ -147,7 +148,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
-@app.websocket("/ws/tareas")
+@app.websocket("/ws/actualizaciones")
 async def websocket_tareas_endpoint(websocket: WebSocket):
     """Endpoint para notificaciones de nuevas tareas en tiempo real."""
     await manager.connect(websocket)

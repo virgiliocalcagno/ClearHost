@@ -4,9 +4,9 @@ Modelo Reserva — Representa una reservación en una propiedad.
 
 import uuid
 import enum
-from datetime import datetime, date
+from datetime import datetime, date, time
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, ForeignKey, Enum as SQLEnum
+from sqlalchemy import String, Integer, Float, Boolean, Text, Date, DateTime, JSON, Time, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -50,6 +50,13 @@ class Reserva(Base):
     estado: Mapped[EstadoReserva] = mapped_column(
         SQLEnum(EstadoReserva), default=EstadoReserva.CONFIRMADA, nullable=False
     )
+    
+    # ── Datos de identidad y horas (Nueva versión) ──
+    hora_checkin: Mapped[time | None] = mapped_column(Time, nullable=True)
+    hora_checkout: Mapped[time | None] = mapped_column(Time, nullable=True)
+    tipo_documento: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    documento_identidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    nacionalidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     notas: Mapped[str | None] = mapped_column(Text, nullable=True)
 

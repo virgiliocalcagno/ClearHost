@@ -87,7 +87,7 @@ export default function TareasView({ data, propiedades, staffList, onAction, onR
         <div className="topbar-actions">
           <div className="view-toggle" style={{display: 'inline-flex', gap: 5, marginRight: 15, background: 'var(--surface)', padding: 4, borderRadius: 8}}>
             <button className={`btn-admin btn-admin-sm ${vista === 'tabla' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('tabla')} style={{border: 'none'}}>📋 Tabla</button>
-            <button className={`btn-admin btn-admin-sm ${vista === 'calendario' || vista === 'calendario4d' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario4d')} style={{border: 'none'}}>⚡ Operativa (4D)</button>
+            <button className={`btn-admin btn-admin-sm ${vista === 'calendario' || vista === 'calendario4d' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario4d')} style={{border: 'none'}}>Operativa (4D)</button>
             <button className={`btn-admin btn-admin-sm ${vista === 'calendario7d' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVista('calendario7d')} style={{border: 'none'}}>📅 Semanal (7D)</button>
           </div>
           <button className="btn-admin btn-admin-primary" style={{marginRight: 10}} onClick={() => onAction({ type: 'tarea' })}>

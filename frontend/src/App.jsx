@@ -6,12 +6,29 @@ import TareaDetalle from './pages/TareaDetalle';
 import Checklist from './pages/Checklist';
 import Auditoria from './pages/Auditoria';
 import Fotos from './pages/Fotos';
+import { useState, useEffect } from 'react';
 import AdminPanel from './pages/AdminPanel';
+import ManagerMobile from './pages/ManagerMobile';
 import OlvidePassword from './pages/OlvidePassword';
 import RecuperarPassword from './pages/RecuperarPassword';
 import AprobarReparacion from './pages/AprobarReparacion';
 import PropietarioDetail from './pages/PropietarioDetail';
 import TareaConfirmar from './pages/TareaConfirmar';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return isMobile;
+}
+
+function AdminViewSwitcher() {
+  const isMobile = useIsMobile();
+  return isMobile ? <ManagerMobile /> : <AdminPanel />;
+}
 
 function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/" />;
@@ -34,7 +51,7 @@ export default function App() {
         <Route path="/olvide-password" element={<OlvidePassword />} />
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminViewSwitcher /></AdminRoute>} />
         <Route path="/propietario/:id/dashboard" element={<ProtectedRoute><PropietarioDetail /></ProtectedRoute>} />
         <Route path="/admin/propietarios/:id" element={<AdminRoute><PropietarioDetail /></AdminRoute>} />
         <Route path="/tarea/:id" element={<ProtectedRoute><TareaDetalle /></ProtectedRoute>} />

@@ -42,16 +42,36 @@ class Settings(BaseSettings):
     DAILY_REMINDER_HOUR: int = 8   # Hora de recordatorios al staff
     DAILY_ALERT_HOUR: int = 7      # Hora de alertas a admins
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    # Google Cloud Vision
+    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
+
+    # Google Gemini
+    GEMINI_API_KEY: Optional[str] = None
+
+    model_config = {
+        "env_file": ".env", 
+        "env_file_encoding": "utf-8",
+        "extra": "ignore"  # Permitir otras variables en .env sin fallar
+    }
 
 
 @lru_cache()
 def get_settings() -> Settings:
     settings = Settings()
     
-    # En Firebase Functions (Cloud Run), el disco es de solo lectura.
-    # Si usamos SQLite, debemos escribir en /tmp/
-    import os
+    # Configurar Google Cloud Vision Credentials
+    if settings.GOOGLE_APPLICATION_CREDENTIALS:
+        import os
+        # Si el path es relativo, unirlo al directorio base de la app (functions/)
+        if not os.path.isabs(settings.GOOGLE_APPLICATION_CREDENTIALS):
+            # De functions/app/config.py subimos a functions/
+            base_path = os.path.dirname(os.path.dirname(__file__))
+            abs_path = os.path.join(base_path, settings.GOOGLE_APPLICATION_CREDENTIALS)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = abs_path
+        else:
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.GOOGLE_APPLICATION_CREDENTIALS
+
+    # En Firebase Functions (Cloud Run)...
     if "K_SERVICE" in os.environ and settings.DATABASE_URL.startswith("sqlite"):
         # Asegurarnos de que el path apunte a /tmp/
         settings.DATABASE_URL = "sqlite+aiosqlite:////tmp/clearhost.db"

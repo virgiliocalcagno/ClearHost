@@ -2,7 +2,7 @@
 Schemas Pydantic para Reserva.
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, time
 from typing import Optional, Any
 from pydantic import BaseModel, Field
 
@@ -16,6 +16,11 @@ class ReservaCreate(BaseModel):
     check_in: date
     check_out: date
     num_huespedes: int = Field(default=1, ge=1)
+    hora_checkin: Optional[time] = None
+    hora_checkout: Optional[time] = None
+    tipo_documento: Optional[str] = None
+    documento_identidad: Optional[str] = None
+    nacionalidad: Optional[str] = None
     notas: Optional[str] = None
 
 
@@ -26,6 +31,11 @@ class ReservaUpdate(BaseModel):
     check_out: Optional[date] = None
     num_huespedes: Optional[int] = None
     estado: Optional[EstadoReserva] = None
+    hora_checkin: Optional[time] = None
+    hora_checkout: Optional[time] = None
+    tipo_documento: Optional[str] = None
+    documento_identidad: Optional[str] = None
+    nacionalidad: Optional[str] = None
     notas: Optional[str] = None
 
 
@@ -39,6 +49,11 @@ class ReservaResponse(BaseModel):
     check_out: date
     num_huespedes: int
     estado: EstadoReserva
+    hora_checkin: Optional[time] = None
+    hora_checkout: Optional[time] = None
+    tipo_documento: Optional[str] = None
+    documento_identidad: Optional[str] = None
+    nacionalidad: Optional[str] = None
     notas: Optional[str] = None
     created_at: datetime
     updated_at: datetime

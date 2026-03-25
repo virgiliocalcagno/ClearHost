@@ -1,12 +1,33 @@
 import React, { useState } from 'react';
 
 export default function GanttReservas({ data, propiedades }) {
-  const [fechaInicio] = useState(new Date().toLocaleDateString('en-CA'));
+  const [fechaInicio, setFechaInicio] = useState(new Date());
   const numDias = 30;
+
+  // Funciones de navegación
+  const handleMesAnterior = () => {
+    const d = new Date(fechaInicio);
+    d.setMonth(d.getMonth() - 1);
+    setFechaInicio(d);
+  };
+
+  const handleMesSiguiente = () => {
+    const d = new Date(fechaInicio);
+    d.setMonth(d.getMonth() + 1);
+    setFechaInicio(d);
+  };
+
+  const handleSaltoDirecto = (e) => {
+    const val = e.target.value; // "YYYY-MM"
+    if (val) {
+      const [year, month] = val.split('-');
+      setFechaInicio(new Date(parseInt(year), parseInt(month) - 1, 1));
+    }
+  };
 
   // Generar array de fechas consecutivas para el timeline
   const currentDates = Array.from({ length: numDias }, (_, i) => {
-    const d = new Date(fechaInicio + 'T12:00:00');
+    const d = new Date(fechaInicio);
     d.setDate(d.getDate() + i);
     return d.toLocaleDateString('en-CA');
   });
@@ -22,6 +43,55 @@ export default function GanttReservas({ data, propiedades }) {
       boxShadow: 'var(--shadow-card)',
       border: '1px solid var(--border)'
     }}>
+      {/* Controles de Navegación */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        padding: '12px 20px', 
+        borderBottom: '1px solid #f1f5f9',
+        backgroundColor: '#fff'
+      }}>
+        <button 
+          onClick={handleMesAnterior}
+          className="btn-admin btn-admin-outline"
+          style={{ padding: '6px 14px', fontSize: '12px' }}
+        >
+          &lt; Anterior
+        </button>
+        
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <input 
+              type="month" 
+              value={`${fechaInicio.getFullYear()}-${String(fechaInicio.getMonth() + 1).padStart(2, '0')}`}
+              onChange={handleSaltoDirecto}
+              style={{ 
+                border: 'none', 
+                background: 'transparent', 
+                fontSize: '16px', 
+                fontWeight: 800, 
+                color: 'var(--text)', 
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                outline: 'none',
+                textAlign: 'center',
+                textTransform: 'capitalize'
+              }}
+            />
+          </div>
+          <small style={{ color: 'var(--text-tertiary)', fontSize: '10px' }}>Ventana de {numDias} días</small>
+        </div>
+
+        <button 
+          onClick={handleMesSiguiente}
+          className="btn-admin btn-admin-outline"
+          style={{ padding: '6px 14px', fontSize: '12px' }}
+        >
+          Siguiente &gt;
+        </button>
+      </div>
+
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: `200px repeat(${numDias}, 45px)`, 
@@ -69,7 +139,21 @@ export default function GanttReservas({ data, propiedades }) {
         })}
 
         {/* Filas por Propiedad */}
-        {propiedades.map(p => {
+        {propiedades.filter(p => {
+          // Mostrar si está activa
+          if (p.activa) return true;
+          
+          // O si está inactiva pero tiene reservas que se cruzan con la ventana actual
+          const tieneReservasEnVentana = data.some(r => {
+            if (r.propiedad_id !== p.id || r.estado === 'CANCELADA') return false;
+            const startD = new Date(r.check_in);
+            const endD = new Date(r.check_out);
+            const minD = new Date(currentDates[0]);
+            const maxD = new Date(currentDates[numDias-1]);
+            return (startD <= maxD && endD >= minD);
+          });
+          return tieneReservasEnVentana;
+        }).map(p => {
           const propReservas = data.filter(r => r.propiedad_id === p.id && r.estado !== 'CANCELADA');
           
           return (
@@ -161,7 +245,7 @@ export default function GanttReservas({ data, propiedades }) {
               <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#10B981' }}></div> Manual
           </div>
           <div style={{ marginLeft: 'auto', fontStyle: 'italic', opacity: 0.8 }}>
-              Mostrando ventana de 30 días desde hoy
+              Navega usando los botones superiores
           </div>
       </div>
     </div>

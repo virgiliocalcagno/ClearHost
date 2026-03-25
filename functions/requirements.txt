@@ -33,3 +33,5 @@ Pillow==10.3.0
 # Firebase Functions runtime & adapter
 firebase-functions>=0.1.0
 a2wsgi==1.10.7
+google-cloud-vision==3.7.2
+google-generativeai==0.8.3
