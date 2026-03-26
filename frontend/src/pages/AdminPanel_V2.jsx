@@ -114,13 +114,13 @@ const AdminPanel_V2 = () => {
     <div className="flex min-h-screen bg-[#fcf8fa] font-['Inter'] selection:bg-[#62fae3] selection:text-[#00201c]">
       {/* SideNavBar - Slate Precision Atelier */}
       <aside className="h-screen w-64 fixed left-0 top-0 bg-[#0F172A] flex flex-col py-6 z-50 shadow-xl font-['Manrope']">
-        <div className="px-6 mb-10 flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#3cddc7] rounded-lg flex items-center justify-center text-slate-900">
-            <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>domain</span>
+        <div className="flex items-center gap-3 px-2 mb-10">
+          <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-900/20">
+            <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>Domain</span>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight leading-none">PropManage AI</h1>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1 font-bold">Enterprise Suite</p>
+            <h1 className="text-white font-black text-xl tracking-tighter leading-none">ClearHost</h1>
+            <p className="text-[10px] text-teal-500 font-bold uppercase tracking-widest mt-1">Admin Panel V2</p>
           </div>
         </div>
 
