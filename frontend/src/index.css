@@ -1,51 +1,142 @@
-@import "tailwindcss";
-
-/* ===== ClearHost V1 — Global Defaults (RE-ASSERTED) ===== */
+/* ===== ClearHost Staff — Design System (V1 - FULL RESTORATION) ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
+  /* Colores */
   --bg: #F5F5F7;
   --surface: #FFFFFF;
   --primary: #00BFA6;
   --primary-dark: #00897B;
+  --primary-light: rgba(0,191,166,0.08);
+  --success: #22C55E;
+  --success-light: rgba(34,197,94,0.08);
+  --warning: #F59E0B;
+  --warning-light: rgba(245,158,11,0.08);
+  --error: #EF4444;
+  --error-light: rgba(239,68,68,0.08);
+  --info: #3B82F6;
+  --info-light: rgba(59,130,246,0.08);
   --text: #1E293B;
+  --text-primary: #1E293B;
   --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
   --border: #E5E7EB;
+  --divider: #F3F4F6;
   --sidebar-bg: #0F172A;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+  --shadow-primary: 0 4px 14px rgba(0,191,166,0.25);
+  --shadow-success: 0 4px 14px rgba(34,197,94,0.25);
+
+  /* Radios */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Tipografía */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
 }
 
-/* 
-  TAILWIND PREFLIGHT FIX: 
-  Force V1 elements to keep their layout despite Tailwind's base reset.
-*/
-.admin-layout {
-  display: flex !important;
-  min-height: 100dvh !important;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-.admin-sidebar {
-  width: 260px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  background: var(--sidebar-bg) !important;
-  position: relative !important;
-  z-index: 100 !important;
-}
-
-.admin-main {
-  flex: 1 !important;
-  margin-left: 260px !important;
-  background: var(--bg) !important;
-}
-
-/* Global Reset (V1 style) */
-* { box-sizing: border-box; }
 body {
   background: var(--bg);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== V1 Classes (Crucial for Login/Sidebar) ===== */
+.app-container {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  position: relative;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: var(--shadow-primary);
+}
+.btn-primary:hover { background: var(--primary-dark); }
+
+.input-group { margin-bottom: 16px; }
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.input-field {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+
+/* Dashboard layout specific re-assertions */
+.admin-layout { 
+  display: flex !important; 
+  min-height: 100vh !important;
+}
+.admin-sidebar { 
+  width: 260px !important; 
+  min-width: 260px;
+  background: var(--sidebar-bg) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.admin-main { 
+  flex: 1 !important; 
+  margin-left: 260px !important; 
 }
 
 /* ===== ClearHost V2 — Isolated Theme Block ===== */
@@ -54,11 +145,8 @@ body {
   --surface: #FFFFFF;
   --primary: #0D9488;
   --primary-dark: #0F766E;
-  --success: #10B981;
   --text: #0F172A;
-  --text-secondary: #475569;
   --border: #E2E8F0;
-  --divider: #F1F5F9;
 
   font-family: 'Inter', sans-serif;
   background: var(--bg);
@@ -68,21 +156,9 @@ body {
   display: block;
 }
 
-.v2-theme .card {
-  background: var(--surface);
-  border-radius: 18px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-}
+/* To avoid leaking Tailwind preflight globally, we only import utilities here */
+@import "tailwindcss/utilities";
+@import "tailwindcss/theme";
 
-.v2-theme .btn-v2 {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 24px;
-  border-radius: 12px;
-  background: var(--primary);
-  color: white;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-}
+/* Note: In Tailwind 4, @import should technically be at top. 
+   If it breaks, we will move it and handle preflight differently. */
