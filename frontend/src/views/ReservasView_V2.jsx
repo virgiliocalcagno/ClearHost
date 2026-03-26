@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 
 /**
  * ReservasView_V2 - Master Container for Guest Reservations.
- * Slate Precision / Enterprise Suite: Tonal Layering & High Density.
+ * Slate Precision / ClearHost V2: Tonal Layering & High Density.
  */
 export function ReservasView_V2({ data = [], propiedades = [], onAction, onRefresh, showToast }) {
   const [activeTab, setActiveTab] = useState('Listado'); // 'Listado', '7D', '30D'

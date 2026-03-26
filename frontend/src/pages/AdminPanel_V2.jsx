@@ -3,8 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { ReservasView_V2 } from '../views/ReservasView_V2';
 import { PropiedadesView_V2 } from '../views/PropiedadesView_V2';
+import DashboardView_V2 from '../views/DashboardView_V2';
+import TareasView_V2 from '../views/TareasView_V2';
+import StaffView_V2 from '../views/StaffView_V2';
+import PropietariosView_V2 from '../views/PropietariosView_V2';
+import MantenimientoView_V2 from '../views/MantenimientoView_V2';
+import LiquidacionView_V2 from '../views/LiquidacionView_V2';
+import NominaView_V2 from '../views/NominaView_V2';
+import ModalReserva_V2 from '../components/ModalReserva_V2';
 
-// Colores Slate Precision Atómicos (vistos en las imágenes)
+// Colores Slate Precision Atómicos
 const COLORS = {
   surface: '#fcf8fa',
   primary: '#0F172A', // Slate 900
@@ -23,6 +31,8 @@ const AdminPanel_V2 = () => {
     tareas: [],
     staff: [],
     propietarios: [],
+    incidencias: [],
+    gastos: [],
     zonas: []
   });
 
@@ -37,15 +47,26 @@ const AdminPanel_V2 = () => {
 
   const fetchData = async () => {
     try {
-      const [p, r, t, s, ow, z] = await Promise.all([
+      const [p, r, t, s, ow, inc, g, z] = await Promise.all([
         api.get('/propiedades/').then(res => res.data),
         api.get('/reservas/').then(res => res.data),
         api.get('/tareas/').then(res => res.data),
         api.get('/staff/').then(res => res.data),
         api.get('/propietarios/').then(res => res.data),
+        api.get('/incidencias/').then(res => res.data),
+        api.get('/gastos/').then(res => res.data),
         api.get('/zonas/').then(res => res.data)
       ]);
-      setData({ propiedades: p, reservas: r, tareas: t, staff: s, propietarios: ow, zonas: z });
+      setData({ 
+        propiedades: p, 
+        reservas: r, 
+        tareas: t, 
+        staff: s, 
+        propietarios: ow, 
+        incidencias: inc,
+        gastos: g,
+        zonas: z 
+      });
     } catch (error) {
       console.error("Error fetching V2 data:", error);
     }
@@ -69,17 +90,89 @@ const AdminPanel_V2 = () => {
     setModal({ show: true, type: cfg.type, edit: cfg.edit });
   };
 
+  const handleSave = async (formData) => {
+    try {
+      let endpoint = '';
+      let payload = { ...formData };
+
+      // Limpieza de datos
+      if (payload.num_huespedes) payload.num_huespedes = parseInt(payload.num_huespedes);
+      
+      switch (modal.type) {
+        case 'reserva': endpoint = '/reservas'; break;
+        default: return;
+      }
+
+      if (modal.edit) {
+        await api.put(`${endpoint}/${modal.edit.id}`, payload);
+        showToast('Reserva actualizada', 'success');
+      } else {
+        await api.post(endpoint, payload);
+        showToast('Reserva creada', 'success');
+      }
+      
+      setModal({ show: false, type: '', edit: null });
+      
+      // Espera para tareas automáticas en backend
+      if (!modal.edit && modal.type === 'reserva') {
+        await new Promise(r => setTimeout(r, 800));
+      }
+      
+      fetchData();
+    } catch (error) {
+      console.error("Error saving V2 data:", error);
+      showToast('Error al guardar datos', 'error');
+    }
+  };
+
   const menuItems = [
-    { id: 'dashboard', label: 'Panel', icon: 'dashboard' },
-    { id: 'reservas', label: 'Reservas', icon: 'description' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'propiedades', label: 'Propiedades', icon: 'domain' },
-    { id: 'huespedes', label: 'Huéspedes', icon: 'group' },
+    { id: 'tareas', label: 'Tareas', icon: 'cleaning_services' },
+    { id: 'reservas', label: 'Reservas', icon: 'calendar_month' },
+    { id: 'staff', label: 'Staff', icon: 'badge' },
+    { id: 'propietarios', label: 'Propietarios', icon: 'handshake' },
     { id: 'mantenimiento', label: 'Mantenimiento', icon: 'build' },
-    { id: 'reportes', label: 'Reportes', icon: 'analytics' }
+    { id: 'liquidacion', label: 'Liquidación', icon: 'payments' },
+    { id: 'nomina', label: 'Nómina', icon: 'savings' }
   ];
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return (
+          <DashboardView_V2 
+            stats={{
+              propiedades: data.propiedades.length,
+              reservasActivas: data.reservas.filter(r => r.estado === 'CONFIRMADA').length,
+              tareasPendientes: data.tareas.filter(t => t.estado === 'PENDIENTE').length,
+              tareasCompletadas: data.tareas.filter(t => t.estado === 'COMPLETADA').length,
+              staffDisponible: data.staff.length
+            }}
+            data={data}
+          />
+        );
+      case 'propiedades':
+        return (
+          <PropiedadesView_V2 
+            data={data.propiedades} 
+            propietarios={data.propietarios}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
+          />
+        );
+      case 'tareas':
+        return (
+          <TareasView_V2 
+            data={data.tareas}
+            propiedades={data.propiedades}
+            staffList={data.staff}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
+          />
+        );
       case 'reservas':
         return (
           <ReservasView_V2 
@@ -90,11 +183,50 @@ const AdminPanel_V2 = () => {
             showToast={showToast}
           />
         );
-      case 'propiedades':
+      case 'staff':
         return (
-          <PropiedadesView_V2 
-            data={data.propiedades} 
-            propietarios={data.propietarios}
+          <StaffView_V2 
+            data={data.staff}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
+          />
+        );
+      case 'propietarios':
+        return (
+          <PropietariosView_V2 
+            data={data.propietarios}
+            propiedades={data.propiedades}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
+            navigate={navigate}
+          />
+        );
+      case 'mantenimiento':
+        return (
+          <MantenimientoView_V2 
+            data={data.incidencias}
+            propiedades={data.propiedades}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
+          />
+        );
+      case 'liquidacion':
+        return (
+          <LiquidacionView_V2 
+            gastos={data.gastos}
+            propiedades={data.propiedades}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
+          />
+        );
+      case 'nomina':
+        return (
+          <NominaView_V2 
+            staffList={data.staff}
             onAction={handleAction}
             onRefresh={fetchData}
             showToast={showToast}
@@ -208,6 +340,17 @@ const AdminPanel_V2 = () => {
         <section className="flex-1 animate-in fade-in duration-700">
           {renderContent()}
         </section>
+
+        {/* Modal Manager V2 */}
+        {modal.show && modal.type === 'reserva' && (
+          <ModalReserva_V2 
+            show={modal.show}
+            editData={modal.edit}
+            onClose={() => setModal({ show: false, type: '', edit: null })}
+            onSave={handleSave}
+            propiedades={data.propiedades}
+          />
+        )}
 
         {/* Premium Toast Notification */}
         {toast.show && (
