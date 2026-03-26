@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { asignarTarea, generarLinkWhatsApp } from '../services/api';
-import ModalForm from '../components/ModalForm';
+import api from '../services/api';
+import { ReservasView_V2 } from '../views/ReservasView_V2';
+import { PropiedadesView_V2 } from '../views/PropiedadesView_V2';
 
-// Vistas V2
-import { TareasView_V2 } from '../views/TareasView_V2';
-import { VistaOperativa_V2 } from '../views/VistaOperativa_V2';
-import { VistaSemanal_V2 } from '../views/VistaSemanal_V2';
+// Colores Slate Precision Atómicos (vistos en las imágenes)
+const COLORS = {
+  surface: '#fcf8fa',
+  primary: '#0F172A', // Slate 900
+  accent: '#0d9488',  // Teal 600
+  accentLight: '#3cddc7', // Tertiary Fixed Dim
+  onSurface: '#1b1b1d',
+  onSurfaceVariant: '#45464d',
+  containerLow: '#f6f3f5'
+};
 
 const AdminPanel_V2 = () => {
-  const [activeTab, setActiveTab] = useState('semanal'); // semanal, operativa, tareas
-  const [dayOffset, setDayOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [data, setData] = useState({
     propiedades: [],
     reservas: [],
@@ -22,31 +27,27 @@ const AdminPanel_V2 = () => {
   });
 
   const [modal, setModal] = useState({ show: false, type: '', edit: null });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
   const navigate = useNavigate();
+
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 4000);
+  };
 
   const fetchData = async () => {
     try {
       const [p, r, t, s, ow, z] = await Promise.all([
-        api.get('/propiedades'),
-        api.get('/reservas'),
-        api.get('/tareas'),
-        api.get('/staff'),
-        api.get('/propietarios'),
-        api.get('/zonas')
+        api.get('/propiedades/').then(res => res.data),
+        api.get('/reservas/').then(res => res.data),
+        api.get('/tareas/').then(res => res.data),
+        api.get('/staff/').then(res => res.data),
+        api.get('/propietarios/').then(res => res.data),
+        api.get('/zonas/').then(res => res.data)
       ]);
-
-      setData({
-        propiedades: p.data,
-        reservas: r.data,
-        tareas: t.data,
-        staff: s.data,
-        propietarios: ow.data,
-        zonas: z.data
-      });
+      setData({ propiedades: p, reservas: r, tareas: t, staff: s, propietarios: ow, zonas: z });
     } catch (error) {
-      console.error("Error fetching admin data:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching V2 data:", error);
     }
   };
 
@@ -54,160 +55,174 @@ const AdminPanel_V2 = () => {
     fetchData();
   }, []);
 
-  const handleAsignar = async (tareaId, staffId, horaInicio) => {
-    try {
-      await asignarTarea(tareaId, staffId || null, horaInicio);
-      fetchData();
-    } catch (err) {
-      alert('Error al asignar tarea');
+  const handleAction = async (cfg) => {
+    if (cfg.type === 'propiedad_delete') {
+       if (confirm('¿Desactivar esta propiedad?')) {
+          try {
+            await api.delete(`/propiedades/${cfg.id}`);
+            showToast('Propiedad desactivada', 'success');
+            fetchData();
+          } catch(e) { showToast('Error al desactivar', 'error'); }
+       }
+       return;
     }
+    setModal({ show: true, type: cfg.type, edit: cfg.edit });
   };
 
-  const handleWhatsApp = async (id) => {
-    try {
-      const res = await generarLinkWhatsApp(id);
-      window.open(res.link, '_blank');
-    } catch(err) {
-      alert("No se pudo generar link de WhatsApp");
-    }
-  };
-
-  const handleSave = async (formData) => {
-    try {
-        let endpoint = '';
-        let method = 'POST';
-        let payload = { ...formData };
-        
-        switch (modal.type) {
-            case 'tarea': endpoint = '/tareas'; break;
-            case 'propiedad': endpoint = '/propiedades'; break;
-            case 'reserva': endpoint = '/reservas'; break;
-            default: return;
-        }
-
-        if (modal.edit) {
-            method = 'PUT';
-            await api.put(`${endpoint}/${modal.edit.id}`, payload);
-        } else {
-            await api.post(endpoint, payload);
-        }
-        
-        setModal({ show: false, type: '', edit: null });
-        fetchData();
-    } catch (error) {
-        alert("Error al guardar cambios");
-    }
-  };
-
-  const staffLimpieza = (data.staff || []).filter(s => s.rol === 'STAFF' || s.rol === 'LIMPIEZA');
+  const menuItems = [
+    { id: 'dashboard', label: 'Panel', icon: 'dashboard' },
+    { id: 'reservas', label: 'Reservas', icon: 'description' },
+    { id: 'propiedades', label: 'Propiedades', icon: 'domain' },
+    { id: 'huespedes', label: 'Huéspedes', icon: 'group' },
+    { id: 'mantenimiento', label: 'Mantenimiento', icon: 'build' },
+    { id: 'reportes', label: 'Reportes', icon: 'analytics' }
+  ];
 
   const renderContent = () => {
-    if (loading) return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <div className="w-12 h-12 border-4 border-[#62fae3] border-t-black rounded-full animate-spin" />
-        <p className="font-black text-xs uppercase tracking-[0.3em] text-[#545f73]">Cargando Entorno Pro V2...</p>
-      </div>
-    );
-
     switch (activeTab) {
-      case 'semanal':
-        return <VistaSemanal_V2 data={data.reservas} propiedades={data.propiedades} />;
-      case 'operativa':
+      case 'reservas':
         return (
-          <VistaOperativa_V2 
-            tareas={data.tareas} 
+          <ReservasView_V2 
+            data={data.reservas} 
             propiedades={data.propiedades} 
-            handleAsignar={handleAsignar}
-            handleTimeChange={handleAsignar}
-            staffLimpieza={staffLimpieza}
-            handleWhatsApp={handleWhatsApp}
-            dayOffset={dayOffset}
-            setDayOffset={setDayOffset}
+            onAction={handleAction}
+            onRefresh={fetchData}
+            showToast={showToast}
           />
         );
-      case 'tareas':
+      case 'propiedades':
         return (
-          <TareasView_V2 
-            data={data.tareas} 
-            propiedades={data.propiedades} 
-            onAction={(cfg) => setModal({ ...cfg, show: true })}
-            handleAsignar={handleAsignar}
-            handleWhatsApp={handleWhatsApp}
-            staffLimpieza={staffLimpieza}
+          <PropiedadesView_V2 
+            data={data.propiedades} 
+            propietarios={data.propietarios}
+            onAction={handleAction}
             onRefresh={fetchData}
+            showToast={showToast}
           />
         );
       default:
-        return null;
+        return (
+          <div className="p-8 text-center mt-20">
+            <h2 className="text-2xl font-bold text-slate-400 uppercase tracking-widest">Módulo en Desarrollo</h2>
+            <p className="text-slate-500 mt-2">Próximamente bajo el estándar Slate Precision</p>
+          </div>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#fcf8fa] text-[#000000] font-sans selection:bg-[#62fae3] selection:text-black">
-      <header className="h-24 flex items-center justify-between px-12 bg-[#fcf8fa]">
-        <div className="flex items-center gap-5">
-          <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-[#62fae3] font-black text-2xl shadow-xl hover:rotate-6 transition-transform">CH</div>
-          <h1 className="text-2xl font-black tracking-tighter">ClearHost <span className="text-[#545f73] font-light italic ml-1">Pro v2.1</span></h1>
-        </div>
-        <div className="flex items-center gap-8 bg-[#f6f3f5] p-2 pl-6 rounded-full">
-          <div className="text-right">
-            <p className="text-xs font-black uppercase tracking-widest leading-none mb-1">Administrator</p>
-            <p className="text-[10px] text-[#545f73] font-bold">CONTROL CENTER</p>
+    <div className="flex min-h-screen bg-[#fcf8fa] font-['Inter'] selection:bg-[#62fae3] selection:text-[#00201c]">
+      {/* SideNavBar - Slate Precision Atelier */}
+      <aside className="h-screen w-64 fixed left-0 top-0 bg-[#0F172A] flex flex-col py-6 z-50 shadow-xl font-['Manrope']">
+        <div className="px-6 mb-10 flex items-center gap-3">
+          <div className="w-8 h-8 bg-[#3cddc7] rounded-lg flex items-center justify-center text-slate-900">
+            <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>domain</span>
           </div>
-          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-2xl shadow-sm border-4 border-[#f6f3f5]">👤</div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight leading-none">PropManage AI</h1>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1 font-bold">Enterprise Suite</p>
+          </div>
         </div>
-      </header>
 
-      <main className="pb-40 pt-10 px-12">
-        <div className="max-w-[1700px] mx-auto">
+        <nav className="flex-1 space-y-1 px-2">
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium tracking-tight ${
+                activeTab === item.id 
+                  ? 'bg-slate-800 text-[#3cddc7] border-l-4 border-[#3cddc7]' 
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-xl">{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="px-4 mt-auto">
+          <button 
+            onClick={() => handleAction({ type: 'propiedad' })}
+            className="w-full bg-[#3cddc7] hover:bg-[#32b9a7] text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mb-6 shadow-lg shadow-[#3cddc7]/10 active:scale-95"
+          >
+            <span className="material-symbols-outlined">add_circle</span> 
+            Agregar Propiedad
+          </button>
+          
+          <div className="space-y-1">
+            <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-all text-sm">
+              <span className="material-symbols-outlined">settings</span>
+              <span>Ajustes</span>
+            </button>
+            <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-all text-sm">
+              <span className="material-symbols-outlined">help_outline</span>
+              <span>Soporte</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Canvas */}
+      <main className="ml-64 flex-1 flex flex-col min-h-screen relative">
+        {/* TopNavBar */}
+        <header className="flex justify-between items-center w-full px-8 h-14 sticky top-0 z-40 bg-slate-50/80 backdrop-blur-md border-b border-slate-200/50">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="relative w-full max-w-md">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+              <input 
+                className="w-full pl-10 pr-4 py-1.5 bg-slate-200/50 border-none rounded-md text-sm focus:ring-2 focus:ring-[#3cddc7] transition-all outline-none" 
+                placeholder="Buscar reservas o propiedades..." 
+                type="text"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <nav className="hidden lg:flex items-center gap-6 text-sm font-['Manrope'] font-semibold">
+              <span className="text-[#0d9488] font-bold">Suite de Propiedades</span>
+              <span className="text-slate-400">|</span>
+              <div className="flex gap-4">
+                <button className="text-slate-500 hover:bg-slate-200/50 px-2 py-1 rounded-md transition-all">Resumen</button>
+                <button className="text-[#0d9488] font-bold px-2 py-1 rounded-md transition-all border-b-2 border-[#0d9488]">Calendario</button>
+                <button className="text-slate-500 hover:bg-slate-200/50 px-2 py-1 rounded-md transition-all">Analíticas</button>
+              </div>
+            </nav>
+
+            <div className="flex items-center gap-3 border-l border-slate-200 pl-6 h-8">
+              <button className="p-2 text-slate-500 hover:bg-slate-200/50 rounded-md transition-all relative">
+                <span className="material-symbols-outlined">notifications</span>
+                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <button className="p-2 text-slate-500 hover:bg-slate-200/50 rounded-md transition-all">
+                <span className="material-symbols-outlined">mail</span>
+              </button>
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-900 border border-slate-700 flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-xl">account_circle</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <section className="flex-1 animate-in fade-in duration-700">
           {renderContent()}
-        </div>
+        </section>
+
+        {/* Premium Toast Notification */}
+        {toast.show && (
+          <div className={`fixed bottom-8 right-8 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border transition-all animate-in slide-in-from-right-10 duration-500 ${
+            toast.type === 'success' ? 'bg-[#131b2e] border-[#3cddc7]/50 text-[#3cddc7]' :
+            toast.type === 'error' ? 'bg-[#93000a] text-white border-red-500/50' :
+            'bg-slate-900 border-slate-700 text-slate-50'
+          }`}>
+            <span className="material-symbols-outlined text-xl">
+              {toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'report' : 'info'}
+            </span>
+            <span className="font-['Manrope'] text-sm font-bold uppercase tracking-widest">{toast.message}</span>
+          </div>
+        )}
       </main>
-
-      {/* Dock Flotante */}
-      <nav className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50">
-        <div className="bg-white/90 backdrop-blur-2xl rounded-[3rem] p-3 flex items-center gap-3 shadow-[0_30px_60px_rgba(0,0,0,0.15)] border border-white/20">
-          <button 
-            onClick={() => setActiveTab('semanal')}
-            className={`px-10 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all ${activeTab === 'semanal' ? 'bg-[#000000] text-[#62fae3] shadow-lg' : 'text-[#545f73] hover:bg-[#f6f3f5]'}`}
-          >
-            Semanal 7D
-          </button>
-          <button 
-            onClick={() => setActiveTab('operativa')}
-            className={`px-10 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all ${activeTab === 'operativa' ? 'bg-[#000000] text-[#62fae3] shadow-lg' : 'text-[#545f73] hover:bg-[#f6f3f5]'}`}
-          >
-            Operativa 4D
-          </button>
-          <button 
-            onClick={() => setActiveTab('tareas')}
-            className={`px-10 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all ${activeTab === 'tareas' ? 'bg-[#000000] text-[#62fae3] shadow-lg' : 'text-[#545f73] hover:bg-[#f6f3f5]'}`}
-          >
-            Tareas
-          </button>
-          <div className="w-px h-10 bg-[#e4e2e4] mx-2" />
-          <button 
-            onClick={() => { localStorage.clear(); navigate('/login'); }}
-            className="w-14 h-14 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-all text-xl"
-            title="Cerrar Sesión"
-          >
-            🚪
-          </button>
-        </div>
-      </nav>
-
-      {/* Modal Form */}
-      <ModalForm 
-        show={modal.show}
-        type={modal.type}
-        editData={modal.edit}
-        onClose={() => setModal({ show: false, type: '', edit: null })}
-        onSave={handleSave}
-        propiedades={data.propiedades}
-        propietarios={data.propietarios}
-        zonas={data.zonas}
-        staffList={data.staff}
-      />
     </div>
   );
 };

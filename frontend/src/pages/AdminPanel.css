@@ -3,14 +3,14 @@
 .admin-layout {
   display: flex;
   min-height: 100dvh;
-  background: var(--bg);
+  background: #fcf8fa;
 }
 
 /* ===== Sidebar ===== */
 .admin-sidebar {
   width: 260px;
-  background: var(--sidebar-bg);
-  color: white;
+  background: #ffffff;
+  color: #1e293b;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -37,7 +37,7 @@
 .sidebar-brand h1 .brand-icon {
   width: 34px;
   height: 34px;
-  background: var(--primary);
+  background: #0dbfa6;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -84,10 +84,10 @@
   color: white;
 }
 .nav-item.active {
-  background: var(--primary);
+  background: #0dbfa6;
   color: white;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(13,148,136,0.3);
+  box-shadow: 0 4px 12px rgba(13,191,166,0.2);
 }
 .nav-item .nav-icon {
   font-size: 18px;
