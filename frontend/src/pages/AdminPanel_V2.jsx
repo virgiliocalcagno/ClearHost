@@ -243,103 +243,121 @@ const AdminPanel_V2 = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fcf8fa] font-['Inter'] selection:bg-[#62fae3] selection:text-[#00201c]">
-      {/* SideNavBar - Slate Precision Atelier */}
-      <aside className="h-screen w-64 fixed left-0 top-0 bg-[#0F172A] flex flex-col py-6 z-50 shadow-xl font-['Manrope']">
-        <div className="flex items-center gap-3 px-2 mb-10">
-          <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-900/20">
-            <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>Domain</span>
+    <div className="v2-theme">
+      <div className="flex h-screen bg-slate-50 font-['Inter'] overflow-hidden">
+        {/* SideNavBar - Slate Precision Atelier */}
+        <aside className="w-64 bg-[#0F172A] flex flex-col py-6 z-50 shadow-xl font-['Manrope'] border-r border-slate-800/40">
+          <div className="flex items-center gap-3 px-6 mb-10">
+            <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-900/20">
+              <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>Domain</span>
+            </div>
+            <div>
+              <h1 className="text-white font-black text-xl tracking-tighter leading-none">ClearHost</h1>
+              <p className="text-[10px] text-teal-500 font-bold uppercase tracking-widest mt-1">Admin Panel V2</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-white font-black text-xl tracking-tighter leading-none">ClearHost</h1>
-            <p className="text-[10px] text-teal-500 font-bold uppercase tracking-widest mt-1">Admin Panel V2</p>
-          </div>
-        </div>
 
-        <nav className="flex-1 space-y-1 px-2">
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium tracking-tight ${
-                activeTab === item.id 
-                  ? 'bg-slate-800 text-[#3cddc7] border-l-4 border-[#3cddc7]' 
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-              }`}
+          <nav className="flex-1 space-y-1 px-4 overflow-y-auto custom-scrollbar">
+            {menuItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium tracking-tight group ${
+                  activeTab === item.id 
+                    ? 'bg-slate-800 text-[#3cddc7] border-l-4 border-[#3cddc7]' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
+              >
+                <span className="material-symbols-outlined text-xl transition-transform group-hover:scale-110">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="px-4 mt-auto pt-6 border-t border-slate-800/40">
+            <button 
+              onClick={() => handleAction({ type: 'propiedad' })}
+              className="w-full bg-[#3cddc7] hover:bg-[#32b9a7] text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mb-4 shadow-lg shadow-[#3cddc7]/10 active:scale-95"
             >
-              <span className="material-symbols-outlined text-xl">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="material-symbols-outlined">add_circle</span> 
+              Nueva Propiedad
             </button>
-          ))}
-        </nav>
-
-        <div className="px-4 mt-auto">
-          <button 
-            onClick={() => handleAction({ type: 'propiedad' })}
-            className="w-full bg-[#3cddc7] hover:bg-[#32b9a7] text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 mb-6 shadow-lg shadow-[#3cddc7]/10 active:scale-95"
-          >
-            <span className="material-symbols-outlined">add_circle</span> 
-            Agregar Propiedad
-          </button>
-          
-          <div className="space-y-1">
-            <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-all text-sm">
-              <span className="material-symbols-outlined">settings</span>
-              <span>Ajustes</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-all text-sm">
-              <span className="material-symbols-outlined">help_outline</span>
-              <span>Soporte</span>
+            
+            <button 
+              onClick={() => { localStorage.clear(); navigate('/login'); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-500/5 rounded-lg transition-all text-sm"
+            >
+              <span className="material-symbols-outlined">logout</span>
+              <span>Cerrar Sesión</span>
             </button>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main Canvas */}
-      <main className="ml-64 flex-1 flex flex-col min-h-screen relative">
-        {/* TopNavBar */}
-        <header className="flex justify-between items-center w-full px-8 h-14 sticky top-0 z-40 bg-slate-50/80 backdrop-blur-md border-b border-slate-200/50">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="relative w-full max-w-md">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-              <input 
-                className="w-full pl-10 pr-4 py-1.5 bg-slate-200/50 border-none rounded-md text-sm focus:ring-2 focus:ring-[#3cddc7] transition-all outline-none" 
-                placeholder="Buscar reservas o propiedades..." 
-                type="text"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <nav className="hidden lg:flex items-center gap-6 text-sm font-['Manrope'] font-semibold">
-              <span className="text-[#0d9488] font-bold">Suite de Propiedades</span>
-              <span className="text-slate-400">|</span>
-              <div className="flex gap-4">
-                <button className="text-slate-500 hover:bg-slate-200/50 px-2 py-1 rounded-md transition-all">Resumen</button>
-                <button className="text-[#0d9488] font-bold px-2 py-1 rounded-md transition-all border-b-2 border-[#0d9488]">Calendario</button>
-                <button className="text-slate-500 hover:bg-slate-200/50 px-2 py-1 rounded-md transition-all">Analíticas</button>
-              </div>
-            </nav>
-
-            <div className="flex items-center gap-3 border-l border-slate-200 pl-6 h-8">
-              <button className="p-2 text-slate-500 hover:bg-slate-200/50 rounded-md transition-all relative">
-                <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button className="p-2 text-slate-500 hover:bg-slate-200/50 rounded-md transition-all">
-                <span className="material-symbols-outlined">mail</span>
-              </button>
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-900 border border-slate-700 flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-xl">account_circle</span>
+        {/* Main Canvas */}
+        <main className="flex-1 flex flex-col min-h-screen relative overflow-hidden bg-slate-50/50">
+          {/* TopNavBar */}
+          <header className="flex justify-between items-center w-full px-8 h-16 sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60 font-['Manrope']">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="relative w-full max-w-md">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                <input 
+                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#3cddc7] transition-all outline-none text-slate-600" 
+                  placeholder="Buscar en el Atelier..." 
+                  type="text"
+                />
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Content Area */}
-        <section className="flex-1 animate-in fade-in duration-700">
-          {renderContent()}
-        </section>
+            <div className="flex items-center gap-6">
+              <div className="hidden lg:flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-400">
+                <span className="flex items-center gap-1.5 text-emerald-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Cloud Active
+                </span>
+                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                <span>v2.0.4</span>
+              </div>
+
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-6 h-8">
+                <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all relative">
+                  <span className="material-symbols-outlined">notifications</span>
+                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
+                </button>
+                <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-900 border-2 border-white shadow-sm flex items-center justify-center ml-2">
+                  <span className="material-symbols-outlined text-white text-xl">account_circle</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Content Area */}
+          <section className="flex-1 overflow-y-auto p-10 custom-scrollbar relative">
+            {/* Header decorativo sutil */}
+            <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-slate-100 to-transparent pointer-events-none -z-10" />
+            
+            <div className="fade-in">
+              <div className="mb-8">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                  {menuItems.find(i => i.id === activeTab)?.label}
+                  <span className="w-2 h-2 rounded-full bg-[#3cddc7] shadow-[0_0_10px_#3cddc7]" />
+                </h2>
+                <p className="text-slate-500 text-sm font-medium mt-1">
+                  Atelier / {menuItems.find(i => i.id === activeTab)?.label}
+                </p>
+              </div>
+              
+              {renderContent()}
+            </div>
+          </section>
+
+          {/* Premium Toast Notification */}
+          {toast.show && (
+            <div className="fixed bottom-8 right-8 z-[2000] flex items-center gap-3 px-6 py-4 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-800 animate-in slide-in-from-right-10 duration-500">
+              <div className="w-2 h-2 rounded-full bg-[#3cddc7] animate-pulse" />
+              <span className="font-['Manrope'] text-sm font-bold tracking-wide">{toast.message}</span>
+            </div>
+          )}
+        </main>
 
         {/* Modal Manager V2 */}
         {modal.show && modal.type === 'reserva' && (
@@ -351,21 +369,7 @@ const AdminPanel_V2 = () => {
             propiedades={data.propiedades}
           />
         )}
-
-        {/* Premium Toast Notification */}
-        {toast.show && (
-          <div className={`fixed bottom-8 right-8 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border transition-all animate-in slide-in-from-right-10 duration-500 ${
-            toast.type === 'success' ? 'bg-[#131b2e] border-[#3cddc7]/50 text-[#3cddc7]' :
-            toast.type === 'error' ? 'bg-[#93000a] text-white border-red-500/50' :
-            'bg-slate-900 border-slate-700 text-slate-50'
-          }`}>
-            <span className="material-symbols-outlined text-xl">
-              {toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'report' : 'info'}
-            </span>
-            <span className="font-['Manrope'] text-sm font-bold uppercase tracking-widest">{toast.message}</span>
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 };
