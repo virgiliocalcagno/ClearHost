@@ -6,7 +6,7 @@ import uuid
 import enum
 from datetime import datetime
 
-from sqlalchemy import String, Boolean, DateTime, Enum as SQLEnum, ForeignKey
+from sqlalchemy import String, Boolean, DateTime, Enum as SQLEnum, ForeignKey, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -44,6 +44,22 @@ class UsuarioStaff(Base):
     fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     disponible: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    # Extensiones para el módulo de Equipo (Estilo iGMS)
+    # permisos: { "dashboard": "RW", "calendar": "R", "tasks": "RW", "financial": "N", ... }
+    permisos: Mapped[dict | None] = mapped_column(JSON, nullable=True, default={})
+    
+    # propiedades_acceso: Listado de UUIDs de propiedades a las que tiene acceso
+    propiedades_acceso: Mapped[list | None] = mapped_column(JSON, nullable=True, default=[])
+
+    # notificaciones_pref: { "email": true, "push": true, "sms": false }
+    notificaciones_pref: Mapped[dict | None] = mapped_column(JSON, nullable=True, default={"email": True, "push": True, "sms": False})
+    etiquetas_acceso: Mapped[list | None] = mapped_column(JSON, nullable=True, default=[])
+
+    # Asociación opcional a un Equipo
+    equipo_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("equipos.id"), nullable=True, index=True
+    )
+    equipo = relationship("Equipo", back_populates="miembros", lazy="selectin")
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -52,5 +68,10 @@ class UsuarioStaff(Base):
     tareas_asignadas = relationship("TareaOperativa", back_populates="asignado", lazy="selectin")
     adelantos = relationship("AdelantoStaff", back_populates="staff", lazy="selectin")
 
+    # --- iGMS Logic: Status & Activity ---
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE", comment="ACTIVE, PENDING, INACTIVE")
+    last_activity: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    pago_por_tarea: Mapped[float | None] = mapped_column(Float, default=0.0)
+
     def __repr__(self):
-        return f"<UsuarioStaff {self.nombre} ({self.rol.value})>"
+        return f"<UsuarioStaff {self.nombre} ({self.rol})>"

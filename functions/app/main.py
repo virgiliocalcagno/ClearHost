@@ -6,15 +6,16 @@ FastAPI application con todos los routers, CORS, y scheduler en startup.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios, zonas, gastos, ocr
+from app.routers import propiedades, staff, reservas, tareas, incidencias, propietarios, zonas, gastos, ocr, equipos
 from app.services.scheduler import setup_scheduler, shutdown_scheduler
 from app.utils.websocket_manager import manager
-from fastapi import WebSocket
+
 
 # Configurar logging
 logging.basicConfig(
@@ -139,6 +140,7 @@ app.include_router(propietarios.router, prefix="/api")
 app.include_router(gastos.router, prefix="/api")
 app.include_router(ocr.router)
 app.include_router(zonas.router)  # ya tiene prefix /api/zonas internamente
+app.include_router(equipos.router, prefix="/api")
 
 
 @app.get("/")

@@ -5,6 +5,8 @@ import ProVisionLayout from '../layouts/ProVisionLayout';
 import PropiedadesView from '../views/PropiedadesView';
 import CalendarioMultipleView from '../views/CalendarioMultipleView';
 import { TareasView_V2 } from '../views/TareasView_V2';
+import EquipoView from '../views/EquipoView';
+import MemberManagementSidebar from '../components/MemberManagementSidebar';
 import ModalForm from '../components/ModalForm';
 
 const ProControlPanel = () => {
@@ -17,7 +19,8 @@ const ProControlPanel = () => {
     staff: [],
     propietarios: [],
     zonas: [],
-    inventario: []
+    inventario: [],
+    equipos: []
   });
   
   const [modal, setModal] = useState({ show: false, type: '', edit: null });
@@ -28,10 +31,59 @@ const ProControlPanel = () => {
     setTimeout(() => setToast({ show: false, msg: '' }), 3000);
   };
 
+  const handleSave = async (formData) => {
+    try {
+      let endpoint = '';
+      const type = modal.type.split('-')[0]; // manejar staff-edit etc
+      
+      switch (type) {
+        case 'tarea': endpoint = '/tareas/'; break;
+        case 'propiedad': endpoint = '/propiedades/'; break;
+        case 'reserva': endpoint = '/reservas/'; break;
+        case 'staff': 
+        case 'new_member': endpoint = '/staff/'; break;
+        case 'propietario': endpoint = '/propietarios/'; break;
+        case 'incidencia': endpoint = '/incidencias/'; break;
+        case 'gasto': endpoint = '/gastos-operativos/'; break;
+        case 'adelanto': endpoint = '/adelantos-staff/'; break;
+        default: endpoint = `/${type}s/`;
+      }
+
+      // Normalizar data si es necesario (ej: UUIDs)
+      const payload = { ...formData };
+      
+      if (type === 'tarea' && !payload.reserva_id) {
+        delete payload.reserva_id; // Dejar que el backend maneje el nulo
+      }
+
+      if (modal.edit && modal.edit.id) {
+        // Edición
+        await api.put(`${endpoint}${modal.edit.id}`, payload);
+        showToast(`${type.toUpperCase()} actualizada correctamente`);
+      } else {
+        // Creación
+        if (type === 'tarea') {
+          const { crearTarea } = await import('../services/api');
+          await crearTarea(payload);
+        } else {
+           await api.post(endpoint, payload);
+        }
+        showToast(`${type.toUpperCase()} creada con éxito`);
+      }
+
+      setModal({ show: false, type: '', edit: null });
+      fetchData();
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      const errorMsg = error.response?.data?.detail || "Error de conexión con el servidor";
+      showToast(`Error: ${errorMsg}`);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const safe = (promise) => promise.then(r => r.data).catch(() => []);
-      const [propiedades, reservas, tareas, staff, propietarios, zonas, inventario] = await Promise.all([
+      const [propiedades, reservas, tareas, staff, propietarios, zonas, inventario, equipos] = await Promise.all([
         safe(api.get('/propiedades/')),
         safe(api.get('/reservas/')),
         safe(api.get('/tareas/')),
@@ -39,9 +91,10 @@ const ProControlPanel = () => {
         safe(api.get('/propietarios/')),
         safe(api.get('/zonas/')),
         safe(api.get('/propietarios/all/inventario/')),
+        safe(api.get('/equipos/')),
       ]);
 
-      setData({ propiedades, reservas, tareas, staff, propietarios, zonas, inventario });
+      setData({ propiedades, reservas, tareas, staff, propietarios, zonas, inventario, equipos });
     } catch (error) {
       console.error("Error fetching pro-control data:", error);
     } finally {
@@ -99,6 +152,16 @@ const ProControlPanel = () => {
             }}
           />
         );
+      case 'equipo':
+        return (
+          <EquipoView 
+            data={data.staff} 
+            equipos={data.equipos} 
+            onAction={(cfg) => setModal({ ...cfg, show: true })} 
+            onRefresh={fetchData} 
+            showToast={showToast} 
+          />
+        );
       default:
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-[#7c839b]">
@@ -111,6 +174,7 @@ const ProControlPanel = () => {
         );
     }
   };
+
 
   if (loading) return (
      <div className="h-screen w-screen bg-[#f8f9ff] flex flex-col items-center justify-center gap-4">
@@ -126,63 +190,37 @@ const ProControlPanel = () => {
     <ProVisionLayout activeModule={getModuleName(moduleId)}>
       {renderModule()}
 
-      {/* Modal Reutilizado */}
+      {/* Modals */}
       <ModalForm 
-        show={modal.show}
+        show={modal.show && modal.type !== 'new_member'}
         type={modal.type}
         editData={modal.edit}
         onClose={() => setModal({ show: false, type: '', edit: null })}
-        onSave={async (formData) => {
-            try {
-              let endpoint = '';
-              const type = modal.type.split('-')[0]; // manejar staff-edit etc
-              
-              switch (type) {
-                case 'tarea': endpoint = '/tareas/'; break;
-                case 'propiedad': endpoint = '/propiedades/'; break;
-                case 'reserva': endpoint = '/reservas/'; break;
-                case 'staff': endpoint = '/staff/'; break;
-                case 'propietario': endpoint = '/propietarios/'; break;
-                case 'incidencia': endpoint = '/incidencias/'; break;
-                case 'gasto': endpoint = '/gastos-operativos/'; break;
-                case 'adelanto': endpoint = '/adelantos-staff/'; break;
-                default: endpoint = `/${type}s/`;
-              }
-
-              // Normalizar data si es necesario (ej: UUIDs)
-              const payload = { ...formData };
-              
-              if (type === 'tarea' && !payload.reserva_id) {
-                delete payload.reserva_id; // Dejar que el backend maneje el nulo
-              }
-
-              if (modal.edit && modal.edit.id) {
-                // Edición
-                await api.put(`${endpoint}${modal.edit.id}`, payload);
-                showToast(`${type.toUpperCase()} actualizada correctamente`);
-              } else {
-                // Creación (Usar servicio explícito para Tareas)
-                if (type === 'tarea') {
-                  const { crearTarea } = await import('../services/api');
-                  await crearTarea(payload);
-                } else {
-                   await api.post(endpoint, payload);
-                }
-                showToast(`${type.toUpperCase()} creada con éxito`);
-              }
-
-              setModal({ show: false, type: '', edit: null });
-              fetchData();
-            } catch (error) {
-              console.error("Error al guardar:", error);
-              const errorMsg = error.response?.data?.detail || "Error de conexión con el servidor";
-              showToast(`Error: ${errorMsg}`);
-            }
-        }}
+        onSave={handleSave}
         propiedades={data.propiedades}
         propietarios={data.propietarios}
         zonas={data.zonas}
         staffList={data.staff}
+      />
+
+      <MemberManagementSidebar 
+        show={modal.show && (modal.type === 'new_member' || modal.type === 'edit_staff')}
+        member={modal.edit}
+        onClose={() => setModal({ show: false, type: '', edit: null })}
+        onSave={handleSave}
+        onDelete={async (id) => {
+          if (window.confirm('¿Estás seguro de que deseas eliminar este miembro?')) {
+            try {
+              await api.delete(`/staff/${id}`);
+              showToast('Miembro eliminado correctamente');
+              setModal({ show: false, type: '', edit: null });
+              fetchData();
+            } catch (e) {
+              showToast('Error al eliminar');
+            }
+          }
+        }}
+        properties={data.propiedades}
       />
 
       {/* ProVision Toast - Alineado con v1 */}

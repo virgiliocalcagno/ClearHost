@@ -22,6 +22,13 @@ class StaffCreate(BaseModel):
     password: str = Field(..., min_length=4) # Bajado a 4 para facilitar PINs de campo
     rol: RolStaff = RolStaff.STAFF
     zona_id: Optional[str] = None
+    equipo_id: Optional[str] = None
+    permisos: Optional[dict] = {}
+    propiedades_acceso: Optional[list] = []
+    etiquetas_acceso: Optional[list[str]] = []
+    notificaciones_pref: Optional[dict] = {"email": True, "push": True, "sms": False}
+    status: str = "ACTIVE"
+    pago_por_tarea: Optional[float] = 0.0
 
 
 class StaffUpdate(BaseModel):
@@ -36,7 +43,15 @@ class StaffUpdate(BaseModel):
     password: Optional[str] = Field(None, min_length=4)
     rol: Optional[RolStaff] = None
     zona_id: Optional[str] = None
+    equipo_id: Optional[str] = None
+    permisos: Optional[dict] = None
+    propiedades_acceso: Optional[list] = None
+    notificaciones_pref: Optional[dict] = None
+    etiquetas_acceso: Optional[list[str]] = None
     disponible: Optional[bool] = None
+    status: Optional[str] = None
+    pago_por_tarea: Optional[float] = None
+    last_activity: Optional[datetime] = None
 
 
 class StaffResponse(BaseModel):
@@ -52,7 +67,15 @@ class StaffResponse(BaseModel):
     rol: RolStaff
     zona_id: Optional[str] = None
     zona_nombre: Optional[str] = None
+    equipo_id: Optional[str] = None
+    permisos: Optional[dict] = None
+    propiedades_acceso: Optional[list] = []
+    notificaciones_pref: Optional[dict] = None
     disponible: bool
+    status: str
+    pago_por_tarea: Optional[float] = 0.0
+    last_activity: Optional[datetime] = None
+    etiquetas_acceso: Optional[list[str]] = []
 
     created_at: datetime
     updated_at: datetime
