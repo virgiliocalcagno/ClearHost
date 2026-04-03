@@ -14,6 +14,9 @@ class ReservaCreate(BaseModel):
     propiedad_id: UUID
     fuente: FuenteReserva = FuenteReserva.MANUAL
     nombre_huesped: str = Field(..., min_length=1, max_length=300)
+    doc_identidad: Optional[str] = None
+    nacionalidad: Optional[str] = None
+    telefono_huesped: Optional[str] = None
     check_in: date
     check_out: date
     num_huespedes: int = Field(default=1, ge=1)
@@ -23,6 +26,9 @@ class ReservaCreate(BaseModel):
 class ReservaUpdate(BaseModel):
     fuente: Optional[FuenteReserva] = None
     nombre_huesped: Optional[str] = None
+    doc_identidad: Optional[str] = None
+    nacionalidad: Optional[str] = None
+    telefono_huesped: Optional[str] = None
     check_in: Optional[date] = None
     check_out: Optional[date] = None
     num_huespedes: Optional[int] = None
@@ -36,6 +42,11 @@ class ReservaResponse(BaseModel):
     fuente: FuenteReserva
     uid_ical: Optional[str] = None
     nombre_huesped: str
+    doc_identidad: Optional[str] = None
+    nacionalidad: Optional[str] = None
+    telefono_huesped: Optional[str] = None
+    telefono_ultimos_4: Optional[str] = None
+    codigo_reserva_canal: Optional[str] = None
     check_in: date
     check_out: date
     num_huespedes: int

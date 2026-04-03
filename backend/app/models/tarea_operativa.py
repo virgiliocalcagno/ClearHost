@@ -7,7 +7,7 @@ import uuid
 import enum
 from datetime import datetime, date, time
 
-from sqlalchemy import String, Date, Time, DateTime, Text, Boolean, ForeignKey, Enum as SQLEnum, JSON, Float
+from sqlalchemy import String, Integer, Date, Time, DateTime, Text, Boolean, ForeignKey, Enum as SQLEnum, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -21,6 +21,7 @@ class EstadoTarea(str, enum.Enum):
     COMPLETADA = "COMPLETADA" # Terminada por staff
     CLEAN_AND_READY = "CLEAN_AND_READY" # Alias para completada
     VERIFICADA = "VERIFICADA" # Para el admin
+    CANCELADA = "CANCELADA" # Cancelación auditada
 
 
 class PrioridadTarea(str, enum.Enum):
@@ -37,10 +38,10 @@ class TareaOperativa(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     # ID secuencial para vista de usuario (T-1001)
-    id_secuencial: Mapped[int] = mapped_column(Integer, autoincrement=True, unique=True, index=True, nullable=True)
+    id_secuencial: Mapped[int | None] = mapped_column(Integer, unique=True, index=True, nullable=True)
 
-    reserva_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("reservas.id"), nullable=False
+    reserva_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("reservas.id"), nullable=True
     )
     propiedad_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("propiedades.id"), nullable=False
@@ -84,6 +85,11 @@ class TareaOperativa(Base):
 
     completada_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     verificada_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
+    # Auditoría Sacred iCal
+    eliminada_por_nombre: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    motivo_eliminacion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    eliminada_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

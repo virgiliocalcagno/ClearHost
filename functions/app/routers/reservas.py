@@ -4,7 +4,7 @@ Router de Reservas — CRUD + sincronización iCal.
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -13,8 +13,22 @@ from app.models.reserva import Reserva, EstadoReserva, FuenteReserva
 from app.models.propiedad import Propiedad
 from app.schemas.reserva import ReservaCreate, ReservaUpdate, ReservaResponse
 from app.services.task_automation import crear_tarea_para_reserva
+from app.services.ocr_service import extract_guest_data_from_image
 
 router = APIRouter(prefix="/reservas", tags=["Reservas"])
+
+
+@router.post("/scan-id")
+async def scan_id(file: UploadFile = File(...)):
+    """
+    Escaneo Unificado con Gemini 1.5 Flash.
+    """
+    try:
+        content = await file.read()
+        extracted_data = await extract_guest_data_from_image(content)
+        return extracted_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en escaneo: {str(e)}")
 
 
 @router.get("/", response_model=list[ReservaResponse])
@@ -170,63 +184,71 @@ async def actualizar_reserva(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Actualizar una reserva existente."""
-    result = await db.execute(
-        select(Reserva).where(Reserva.id == str(reserva_id))
-    )
-    reserva = result.scalar_one_or_none()
-    if not reserva:
-        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+    """Actualizar una reserva manual con bloqueo total de overbooking."""
+    try:
+        # 1. Localizar reserva
+        res_id = str(reserva_id)
+        result = await db.execute(select(Reserva).where(Reserva.id == res_id))
+        reserva = result.scalar_one_or_none()
+        if not reserva:
+            raise HTTPException(status_code=404, detail="Reserva no encontrada")
 
-    if reserva.fuente != FuenteReserva.MANUAL:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Solo se pueden editar reservas creadas manualmente. Las de plataforma se gestionan vía iCal."
-        )
+        if reserva.fuente != FuenteReserva.MANUAL:
+            raise HTTPException(status_code=403, detail="Las reservas de plataforma no se pueden editar manualmente.")
 
-    # Validar fechas si se están cambiando
-    new_in = data.check_in if data.check_in else reserva.check_in
-    new_out = data.check_out if data.check_out else reserva.check_out
-    
-    if new_out <= new_in:
-        raise HTTPException(status_code=400, detail="check_out debe ser posterior a check_in")
+        # 2. Extraer y validar valores proyectados
+        # Aseguramos que propiedad_id sea string
+        target_prop_id = str(data.propiedad_id) if data.propiedad_id is not None else str(reserva.propiedad_id)
+        
+        # Las fechas ya vienen como date objects en Pydantic 2.0 si se definen correctamente
+        target_in = data.check_in if data.check_in is not None else reserva.check_in
+        target_out = data.check_out if data.check_out is not None else reserva.check_out
+        target_estado = data.estado if data.estado is not None else reserva.estado
 
-    # Validar solapamiento (Overbooking) excluyendo esta misma reserva
-    # Solo validar si el estado es CONFIRMADA o está pasando a CONFIRMADA
-    nuevo_estado = data.estado if data.estado else reserva.estado
-    if nuevo_estado == EstadoReserva.CONFIRMADA:
-        conflict_query = select(Reserva).where(
-            Reserva.id != reserva.id,
-            Reserva.propiedad_id == reserva.propiedad_id,
-            Reserva.estado == EstadoReserva.CONFIRMADA,
-            Reserva.check_in < new_out,
-            Reserva.check_out > new_in
-        )
-        conflict_result = await db.execute(conflict_query)
-        conflict = conflict_result.scalars().first()
-        if conflict:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Fechas ocupadas. Conflicto con: {conflict.nombre_huesped} ({conflict.check_in} al {conflict.check_out})."
+        if target_out <= target_in:
+            raise HTTPException(status_code=400, detail="Check-out debe ser posterior al Check-in.")
+
+        # 3. BLOQUEO DE OVERBOOKING (SEGURIDAD CRÍTICA)
+        # Solo comprobamos si la reserva está (o va a estar) CONFIRMADA
+        if target_estado == EstadoReserva.CONFIRMADA:
+            # Query estricta: misma propiedad, estado confirmado, excluyendo esta misma reserva
+            overlap_stmt = select(Reserva).where(
+                Reserva.id != reserva.id,
+                Reserva.propiedad_id == target_prop_id,
+                Reserva.estado == EstadoReserva.CONFIRMADA,
+                # Lógica de solapamiento: (CheckIn < NuevoOut) AND (CheckOut > NuevoIn)
+                Reserva.check_in < target_out,
+                Reserva.check_out > target_in
             )
+            overlap_exec = await db.execute(overlap_stmt)
+            conflicto = overlap_exec.scalars().first()
+            
+            if conflicto:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail=f"MOVIMIENTO DENEGADO: Overbooking con {conflicto.nombre_huesped} ({conflicto.check_in} a {conflicto.check_out})."
+                )
 
-    update_data = data.model_dump(exclude_unset=True)
-    estado_viejo = reserva.estado
-    
-    for field, value in update_data.items():
-        setattr(reserva, field, value)
+        # 4. Actualizar campos
+        prev_estado = reserva.estado
+        up_data = data.model_dump(exclude_unset=True)
+        for key, value in up_data.items():
+            setattr(reserva, key, value)
 
-    await db.flush()
-    await db.refresh(reserva)
+        await db.flush()
+        await db.refresh(reserva)
 
-    # Si se reactiva una reserva (de CANCELADA a CONFIRMADA), 
-    # intentamos crear la tarea de limpieza de nuevo por si se eliminó.
-    from app.models.reserva import EstadoReserva
-    if estado_viejo == EstadoReserva.CANCELADA and reserva.estado == EstadoReserva.CONFIRMADA:
-        from app.services.task_automation import crear_tarea_para_reserva
-        background_tasks.add_task(crear_tarea_para_reserva, reserva.id)
+        # 5. Automatización
+        if prev_estado == EstadoReserva.CANCELADA and reserva.estado == EstadoReserva.CONFIRMADA:
+            background_tasks.add_task(crear_tarea_para_reserva, reserva.id)
 
-    return reserva
+        return reserva
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en validación de seguridad: {str(e)}")
 
 
 @router.delete("/{reserva_id}", status_code=status.HTTP_204_NO_CONTENT)

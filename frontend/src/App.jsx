@@ -14,7 +14,8 @@ import RecuperarPassword from './pages/RecuperarPassword';
 import AprobarReparacion from './pages/AprobarReparacion';
 import PropietarioDetail from './pages/PropietarioDetail';
 import TareaConfirmar from './pages/TareaConfirmar';
-import AdminPanel_V2 from './pages/AdminPanel_V2';
+import ProControlPanel from './pages/ProControlPanel';
+import WelcomePortal from './pages/WelcomePortal';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -53,7 +54,11 @@ export default function App() {
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminViewSwitcher /></AdminRoute>} />
-        <Route path="/admin-v2" element={<AdminRoute><AdminPanel_V2 /></AdminRoute>} />
+        
+        {/* ProVision Elite Architecture */}
+        <Route path="/pro-control" element={<AdminRoute><ProControlPanel /></AdminRoute>} />
+        <Route path="/pro-control/:moduleId" element={<AdminRoute><ProControlPanel /></AdminRoute>} />
+
         <Route path="/propietario/:id/dashboard" element={<ProtectedRoute><PropietarioDetail /></ProtectedRoute>} />
         <Route path="/admin/propietarios/:id" element={<AdminRoute><PropietarioDetail /></AdminRoute>} />
         <Route path="/tarea/:id" element={<ProtectedRoute><TareaDetalle /></ProtectedRoute>} />
@@ -62,7 +67,10 @@ export default function App() {
         <Route path="/tarea/:id/fotos" element={<ProtectedRoute><Fotos /></ProtectedRoute>} />
         <Route path="/reparacion/aprobar/:token" element={<AprobarReparacion />} />
         <Route path="/app/tarea/:tareaId/confirmar" element={<TareaConfirmar />} />
-        {/* Redirigir cualquier otra ruta a la raíz (Login o Dashboard según auth) */}
+        
+        {/* Welcome Portal (Público) */}
+        <Route path="/welcome/:reservaId" element={<WelcomePortal />} />
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

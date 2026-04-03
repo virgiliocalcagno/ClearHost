@@ -10,7 +10,7 @@ from uuid import UUID
 from typing import Optional
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, WebSocket, WebSocketDisconnect, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -25,6 +25,7 @@ from app.schemas.tarea_operativa import (
 )
 from app.models.propiedad import Propiedad
 from app.services.sync_service import trigger_sync, trigger_sync_global
+from app.services.ical_sync import sync_property_ical
 
 
 router = APIRouter(prefix="/tareas", tags=["Tareas de Limpieza"])
@@ -232,6 +233,11 @@ async def crear_tarea(
     prop = prop_result.scalar_one_or_none()
     
     tarea_data = data.model_dump()
+    
+    # Normalizar reserva_id (asegurar que sea None si viene vacío)
+    if not tarea_data.get("reserva_id"):
+        tarea_data["reserva_id"] = None
+
     if prop:
         if not tarea_data.get("pago_al_staff") or tarea_data["pago_al_staff"] == 0:
             tarea_data["pago_al_staff"] = prop.pago_staff
@@ -239,7 +245,7 @@ async def crear_tarea(
 
     tarea = TareaOperativa(**tarea_data)
     
-    # Calcular semáforo de prioridad (simplificado: si es hoy -> Emergencia, mañana -> Media, +1 -> Baja)
+    # Calcular semáforo de prioridad
     hoy = date.today()
     if tarea.fecha_programada == hoy:
         tarea.prioridad = PrioridadTarea.EMERGENCIA
@@ -256,11 +262,8 @@ async def crear_tarea(
     if tarea.asignado_a:
         from app.services.notifications import notificar_nueva_tarea
         from app.models.usuario_staff import UsuarioStaff
-        from app.models.propiedad import Propiedad
         staff_result = await db.execute(select(UsuarioStaff).where(UsuarioStaff.id == tarea.asignado_a))
         staff = staff_result.scalar_one_or_none()
-        prop_result = await db.execute(select(Propiedad).where(Propiedad.id == tarea.propiedad_id))
-        prop = prop_result.scalar_one_or_none()
         if staff and prop:
             try:
                 await notificar_nueva_tarea(tarea, staff, prop)
@@ -274,6 +277,31 @@ async def crear_tarea(
         trigger_sync_global()
 
     return tarea
+
+
+@router.get("/sync-now/", response_model=dict)
+@router.post("/sync-now/", response_model=dict)
+async def sync_now_tareas(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Sincroniza todas las propiedades que tengan iCal configurado.
+    Útil para el botón 'Actualizar' del dashboard.
+    """
+    result = await db.execute(select(Propiedad).where(Propiedad.ical_url != None))
+    propiedades = result.scalars().all()
+    
+    sync_count = 0
+    for prop in propiedades:
+        background_tasks.add_task(sync_property_ical, str(prop.id))
+        sync_count += 1
+        
+    return {
+        "status": "success",
+        "message": f"Sincronización iniciada para {sync_count} propiedades",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 
 

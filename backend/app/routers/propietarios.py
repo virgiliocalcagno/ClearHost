@@ -32,6 +32,14 @@ async def listar_propietarios(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
+@router.get("/all/inventario/", response_model=list[InventarioArticuloResponse])
+async def listar_todo_el_inventario(db: AsyncSession = Depends(get_db)):
+    """Listar todo el inventario de todos los propietarios (consolidado)."""
+    query = select(InventarioArticulo).order_by(InventarioArticulo.articulo)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
 @router.post("/", response_model=PropietarioResponse, status_code=status.HTTP_201_CREATED)
 async def crear_propietario(data: PropietarioCreate, db: AsyncSession = Depends(get_db)):
     """Crear un nuevo propietario."""

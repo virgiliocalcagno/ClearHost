@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import api from '../services/api';
 import { EstadoReservaBadge, FuenteBadge } from '../components/AdminCommon';
 import GanttReservas from '../components/GanttReservas';
+import GanttAirbnb_V2 from '../components/GanttAirbnb_V2';
+import NuevaReservaModal from '../components/NuevaReservaModal';
 
 const cancelarReserva = (id) => api.delete(`/reservas/${id}`);
 const reactivarReserva = (id) => api.put(`/reservas/${id}`, { estado: 'CONFIRMADA' });
@@ -12,6 +14,7 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
   const [filtroFuente, setFiltroFuente] = useState('Todas');
 
   const [vistaActiva, setVistaActiva] = useState('calendario');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const nombresPropiedades = [...new Set(data.map(r => {
     const p = propiedades.find(prop => prop.id === r.propiedad_id);
@@ -36,9 +39,10 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
         <div className="topbar-actions">
           <div className="view-toggle" style={{display: 'inline-flex', gap: 5, marginRight: 15, background: 'var(--surface)', padding: 4, borderRadius: 8, boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)'}}>
             <button className={`btn-admin btn-admin-sm ${vistaActiva === 'tabla' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVistaActiva('tabla')} style={{border: 'none'}}>📋 Listado</button>
-            <button className={`btn-admin btn-admin-sm ${vistaActiva === 'calendario' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVistaActiva('calendario')} style={{border: 'none'}}>📊 Cronograma (Gantt)</button>
+            <button className={`btn-admin btn-admin-sm ${vistaActiva === 'calendario' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVistaActiva('calendario')} style={{border: 'none'}}>📊 Cronograma</button>
+            <button className={`btn-admin btn-admin-sm ${vistaActiva === 'airbnb' ? 'btn-admin-primary' : 'btn-admin-outline'}`} onClick={() => setVistaActiva('airbnb')} style={{border: 'none'}}>✈️ Estilo Airbnb</button>
           </div>
-          <button className="btn-admin btn-admin-primary" style={{marginRight: 10}} onClick={() => onAction({ type: 'reserva' })}>
+          <button className="btn-admin btn-admin-primary" style={{marginRight: 10}} onClick={() => setIsModalOpen(true)}>
             ＋ Nueva Reserva
           </button>
           <button className="btn-admin btn-admin-outline" onClick={onRefresh}>🔄 Actualizar</button>
@@ -167,10 +171,20 @@ export default function ReservasView({ data, propiedades, onAction, onRefresh, s
               })}
             </tbody>
           </table>
-        ) : (
+        ) : vistaActiva === 'calendario' ? (
           <GanttReservas data={filteredData} propiedades={propiedades} />
+        ) : (
+          <GanttAirbnb_V2 data={filteredData} propiedades={propiedades} />
         )}
       </div>
+      {isModalOpen && (
+        <NuevaReservaModal 
+          propiedades={propiedades} 
+          onClose={() => setIsModalOpen(false)} 
+          onRefresh={onRefresh} 
+          showToast={showToast} 
+        />
+      )}
     </div>
   );
 }

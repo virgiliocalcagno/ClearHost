@@ -11,6 +11,7 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.propiedad import Propiedad
 from app.models.reserva import Reserva, FuenteReserva, EstadoReserva
+import re
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -51,11 +52,14 @@ def parse_ical_events(ical_content: str) -> list[dict]:
                 if hasattr(check_in, "date"): check_in = check_in.date()
                 if hasattr(check_out, "date"): check_out = check_out.date()
 
+                description = str(component.get("DESCRIPTION", ""))
+                
                 events.append({
                     "uid_ical": str(component.get("UID", "")),
                     "nombre_huesped": str(component.get("SUMMARY", "Huésped")),
                     "check_in": check_in,
                     "check_out": check_out,
+                    "description": description
                 })
     except Exception as e:
         logger.error(f"Error parseando iCal: {e}")
@@ -84,20 +88,66 @@ async def sync_property_ical(propiedad_id: str):
                 uids_procesados.add(uid)
                 res = existing_res_map.get(uid)
 
+                # [EXTRACCIÓN TÁCTICA] - Parsear descripción para Airbnb
+                desc = event.get("description", "")
+                codigo_canal = None
+                ultimos_4 = None
+                
+                if fuente == FuenteReserva.AIRBNB:
+                    # Extraer HM... de la URL de detalles
+                    match_hm = re.search(r'details/([A-Z0-9]+)', desc)
+                    if match_hm: codigo_canal = match_hm.group(1)
+                    
+                    # Extraer últimos 4 dígitos
+                    match_tel = re.search(r'Last 4 Digits\): (\d{4})', desc)
+                    if match_tel: ultimos_4 = match_tel.group(1)
+
                 if res:
                     if res.estado == EstadoReserva.CANCELADA:
                         res.estado = EstadoReserva.CONFIRMADA
-                        nuevas_reserva_ids.append(res.id)
-                    res.check_in, res.check_out, res.nombre_huesped = event["check_in"], event["check_out"], event["nombre_huesped"]
+                        if res.id not in nuevas_reserva_ids:
+                            nuevas_reserva_ids.append(res.id)
+                            
+                    res.check_in = event["check_in"]
+                    res.check_out = event["check_out"]
+                    res.nombre_huesped = event["nombre_huesped"]
+                    if codigo_canal: res.codigo_reserva_canal = codigo_canal
+                    if ultimos_4: res.telefono_ultimos_4 = ultimos_4
+                    
+                    # [RESILIENCIA ANTI-ERROR]
+                    # Si la reserva está en iCal, DEBE tener una tarea válida.
+                    tiene_tarea_valida = False
+                    if res.tareas:
+                        for t in res.tareas:
+                            if t.estado != "CANCELADA":
+                                tiene_tarea_valida = True
+                                break
+                                
+                    if not tiene_tarea_valida:
+                        # Si no tiene ninguna tarea activa, forzamos creación
+                        if res.id not in nuevas_reserva_ids:
+                            nuevas_reserva_ids.append(res.id)
                 else:
-                    nueva_res = Reserva(propiedad_id=propiedad.id, fuente=fuente, uid_ical=uid, nombre_huesped=event["nombre_huesped"], check_in=event["check_in"], check_out=event["check_out"], estado=EstadoReserva.CONFIRMADA)
+                    nueva_res = Reserva(
+                        propiedad_id=propiedad.id, 
+                        fuente=fuente, 
+                        uid_ical=uid, 
+                        nombre_huesped=event["nombre_huesped"], 
+                        check_in=event["check_in"], 
+                        check_out=event["check_out"], 
+                        estado=EstadoReserva.CONFIRMADA,
+                        codigo_reserva_canal=codigo_canal,
+                        telefono_ultimos_4=ultimos_4
+                    )
                     db.add(nueva_res)
                     await db.flush()
                     nuevas_reserva_ids.append(nueva_res.id)
 
-            for uid, res in existing_res_map.items():
-                if uid not in uids_procesados and res.check_in >= date.today() and res.estado == EstadoReserva.CONFIRMADA:
-                    res.estado = EstadoReserva.CANCELADA
+            # [AUDITORÍA]: No cancelar automáticamente reservas que desaparecen del feed iCal.
+            # Solo un administrador puede marcarlas como CANCELADA tras verificación manual.
+            # for uid, res in existing_res_map.items():
+            #     if uid not in uids_procesados and res.check_in >= date.today() and res.estado == EstadoReserva.CONFIRMADA:
+            #         res.estado = EstadoReserva.CANCELADA
 
             propiedad.ical_last_sync = datetime.utcnow()
             await db.commit()

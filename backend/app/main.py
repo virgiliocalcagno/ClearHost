@@ -6,13 +6,16 @@ FastAPI application con todos los routers, CORS, y scheduler en startup.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import propiedades, staff, reservas, tareas, zonas, propietarios, incidencias, gastos
+from app.routers import propiedades, staff, reservas, tareas, zonas, propietarios, incidencias, gastos, welcome
 from app.services.scheduler import setup_scheduler, shutdown_scheduler
 
 # Configurar logging
@@ -58,21 +61,38 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — permitir conexiones desde frontend y app móvil
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://localhost:3000",
-        "https://clearhost-c8919.web.app",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS — Middleware Manual Ultra-Robusto (Infalible para Errores 500/422)
+@app.middleware("http")
+async def add_cors_header(request: Request, call_next):
+    # Manejar Preflight (OPTIONS)
+    if request.method == "OPTIONS":
+        origin = request.headers.get("Origin", "*")
+        return JSONResponse(
+            content="OK",
+            headers={
+                "Access-Control-Allow-Origin": origin if origin != "null" else "*",
+                "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
+                "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+                "Access-Control-Allow-Credentials": "true",
+            },
+        )
+
+    response = await call_next(request)
+    origin = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = origin if origin != "null" else "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
+    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept"
+    return response
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Manejador global simplificado (el middleware añade CORS)."""
+    logger.error(f"ERROR GLOBAL: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor", "msg": str(exc)}
+    )
 
 # Servir archivos subidos (fotos de evidencia)
 import os
@@ -89,13 +109,14 @@ app.include_router(zonas.router, prefix="/api")
 app.include_router(propietarios.router, prefix="/api")
 app.include_router(incidencias.router, prefix="/api")
 app.include_router(gastos.router, prefix="/api")
+app.include_router(welcome.router, prefix="/api")
 
 
 @app.get("/")
 async def root():
     return {
         "app": settings.APP_NAME,
-        "version": "1.0.0",
+        "version": "1.0.1-PRO",
         "status": "running",
         "docs": "/docs",
     }

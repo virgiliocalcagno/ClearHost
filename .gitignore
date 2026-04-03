@@ -37,6 +37,17 @@ firebase-debug.log*
 .DS_Store
 Thumbs.db
 
+# Firebase Mobile & Credentials
+google-services.json
+GoogleService-Info.plist
+*firebase-credentials.json
+*google-vision-key.json
+*serviceAccountKey.json
+functions/firebase-credentials.json
+functions/google-vision-key.json
+mobile/google-services.json
+mobile/GoogleService-Info.plist
+
 # Project specific
 tmp/
 local_manager_audit_report.md

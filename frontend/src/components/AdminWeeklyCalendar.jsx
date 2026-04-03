@@ -279,7 +279,32 @@ export default function AdminWeeklyCalendar({
 
                         {/* Info Huésped */}
                         <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Huésped:</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Huésped:</div>
+                                {t.codigo_reserva_canal && (
+                                    <div style={{ 
+                                        fontSize: '9px', 
+                                        fontWeight: 800, 
+                                        color: t.fuente_reserva === 'AIRBNB' ? '#FF385C' : 'var(--text-tertiary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        {t.codigo_reserva_canal}
+                                        {t.fuente_reserva === 'AIRBNB' && (
+                                            <a 
+                                                href={`https://www.airbnb.com/hosting/reservations/details/${t.codigo_reserva_canal}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{ color: '#FF385C' }}
+                                            >
+                                                ↗
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <div style={{ fontSize: '12px', fontWeight: 600 }}>{t.nombre_huesped || '—'}</div>
                         </div>
 

@@ -1,5 +1,6 @@
 """
 Modelo Reserva — Representa una reservación en una propiedad.
+Sincronizado con backend/v2.0 para soporte de Identidad y Teléfono.
 """
 
 import uuid
@@ -43,6 +44,10 @@ class Reserva(Base):
     uid_ical: Mapped[str | None] = mapped_column(String(500), unique=True, nullable=True)
 
     nombre_huesped: Mapped[str] = mapped_column(String(300), nullable=False)
+    doc_identidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    nacionalidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    telefono_huesped: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    
     check_in: Mapped[date] = mapped_column(Date, nullable=False)
     check_out: Mapped[date] = mapped_column(Date, nullable=False)
     num_huespedes: Mapped[int] = mapped_column(Integer, default=1)
@@ -51,13 +56,6 @@ class Reserva(Base):
         SQLEnum(EstadoReserva), default=EstadoReserva.CONFIRMADA, nullable=False
     )
     
-    # ── Datos de identidad y horas (Nueva versión) ──
-    hora_checkin: Mapped[time | None] = mapped_column(Time, nullable=True)
-    hora_checkout: Mapped[time | None] = mapped_column(Time, nullable=True)
-    tipo_documento: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    documento_identidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    nacionalidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
-
     notas: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

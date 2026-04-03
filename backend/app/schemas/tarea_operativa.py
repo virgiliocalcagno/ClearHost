@@ -20,7 +20,7 @@ class AuditoriaActivo(BaseModel):
     notas: Optional[str] = None
 
 class TareaCreate(BaseModel):
-    reserva_id: Any
+    reserva_id: Optional[Any] = None
     propiedad_id: Any
     tipo_tarea: str = "LIMPIEZA"  # LIMPIEZA, MANTENIMIENTO, DILIGENCIA
     asignado_a: Optional[Any] = None
@@ -54,9 +54,13 @@ class FotoUpload(BaseModel):
     url: str
     descripcion: Optional[str] = None
 
+class TareaCancel(BaseModel):
+    reason: str
+    authName: str
+
 class TareaResponse(BaseModel):
     id: Any
-    reserva_id: Any
+    reserva_id: Optional[Any] = None
     propiedad_id: Any
     tipo_tarea: str
     asignado_a: Optional[Any] = None
@@ -76,6 +80,12 @@ class TareaResponse(BaseModel):
     moneda_tarea: str
     completada_at: Optional[datetime] = None
     verificada_at: Optional[datetime] = None
+    
+    # Auditoría Sacred iCal
+    eliminada_por_nombre: Optional[str] = None
+    motivo_eliminacion: Optional[str] = None
+    eliminada_at: Optional[datetime] = None
+
     created_at: datetime
     updated_at: datetime
 
@@ -89,3 +99,6 @@ class TareaConDetalles(TareaResponse):
     nombre_asignado: Optional[str] = None
     check_in: Optional[date] = None
     check_out: Optional[date] = None
+    fuente_reserva: Optional[str] = None
+    codigo_reserva_canal: Optional[str] = None
+    self_checkin_complete: bool = False

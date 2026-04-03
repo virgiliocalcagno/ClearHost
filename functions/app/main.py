@@ -105,21 +105,29 @@ async def trust_proxy_headers(request, call_next):
 
 # Firebase Hosting ya maneja HTTPS termination
 
-# CORS — permitir conexiones desde frontend y app móvil
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://localhost:3000",
-        "https://clearhost-c8919.web.app",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS — Middleware Manual Ultra-Robusto (Infalible para Errores 500/422)
+@app.middleware("http")
+async def add_cors_header(request: Request, call_next):
+    # Manejar Preflight (OPTIONS)
+    if request.method == "OPTIONS":
+        origin = request.headers.get("Origin", "*")
+        return JSONResponse(
+            content="OK",
+            headers={
+                "Access-Control-Allow-Origin": origin if origin != "null" else "*",
+                "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
+                "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+                "Access-Control-Allow-Credentials": "true",
+            },
+        )
+
+    response = await call_next(request)
+    origin = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = origin if origin != "null" else "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, PUT, DELETE"
+    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept"
+    return response
 
 # Registrar routers
 app.include_router(propiedades.router, prefix="/api")
@@ -137,7 +145,7 @@ app.include_router(zonas.router)  # ya tiene prefix /api/zonas internamente
 async def root():
     return {
         "app": settings.APP_NAME,
-        "version": "1.0.0",
+        "version": "1.0.1-PRO",
         "status": "running",
         "docs": "/docs",
     }

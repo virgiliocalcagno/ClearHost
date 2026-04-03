@@ -28,10 +28,11 @@ bcrypt==4.2.1
 # Utilities
 python-dotenv==1.0.1
 pydantic[email-validator,email]==2.10.4
+email-validator>=2.0.0
 pydantic-settings==2.7.1
 Pillow==10.3.0
 # Firebase Functions runtime & adapter
 firebase-functions>=0.1.0
 a2wsgi==1.10.7
 google-cloud-vision==3.7.2
-google-generativeai==0.8.3
+google-generativeai>=0.8.3

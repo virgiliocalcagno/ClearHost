@@ -12,7 +12,7 @@ export const STATIC_BASE = import.meta.env.DEV
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 15000,
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -44,6 +44,16 @@ export const getStoredStaff = () => {
 export const isAuthenticated = () => !!localStorage.getItem('auth_token');
 
 // ========== TAREAS ==========
+export const getTareas = async (params = {}) => {
+  const res = await api.get('/tareas/', { params });
+  return res.data;
+};
+
+export const crearTarea = async (data) => {
+  const res = await api.post('/tareas/', data);
+  return res.data;
+};
+
 export const getTareasDeHoy = async (staffId) => {
   const res = await api.get(`/tareas/hoy/${staffId}`);
   return res.data;
@@ -103,6 +113,11 @@ export const asignarTarea = async (tareaId, staffId, horaInicio) => {
   return res.data;
 };
 
+export const actualizarTarea = async (id, data) => {
+  const res = await api.put(`/tareas/${id}`, data);
+  return res.data;
+};
+
 export const autoAsignarTareas = async () => {
   const res = await api.post('/tareas/auto-asignar/');
   return res.data;
@@ -110,7 +125,7 @@ export const autoAsignarTareas = async () => {
 
 // ========== ICAL SYNC ==========
 export const syncIcalAll = async () => {
-  const res = await api.post('/sync-ical-all/');
+  const res = await api.post('/tareas/sync-now/');
   return res.data;
 };
 
@@ -135,9 +150,30 @@ export const crearAdelanto = async (data) => {
   return res.data;
 };
 
+// ========== RESERVAS ==========
+export const crearReserva = async (data) => {
+  const res = await api.post('/reservas/', data);
+  return res.data;
+};
+
+export const actualizarReserva = async (reservaId, data) => {
+  const res = await api.put(`/reservas/${reservaId}`, data);
+  return res.data;
+};
+
+export const eliminarReserva = async (reservaId) => {
+  const res = await api.delete(`/reservas/${reservaId}`);
+  return res.data;
+};
+
 // ========== PROPIETARIOS ==========
 export const getPropietarios = async () => {
   const res = await api.get('/propietarios');
+  return res.data;
+};
+
+export const getInventarioTodo = async () => {
+  const res = await api.get('/propietarios/all/inventario/');
   return res.data;
 };
 
@@ -153,6 +189,17 @@ export const actualizarPropietario = async (id, data) => {
 
 export const eliminarPropietario = async (id) => {
   const res = await api.delete(`/propietarios/${id}`);
+  return res.data;
+};
+
+// ========== WELCOME PORTAL ==========
+export const getWelcomeInfo = async (reservaId) => {
+  const res = await api.get(`/welcome/${reservaId}`);
+  return res.data;
+};
+
+export const registerWelcome = async (reservaId, data) => {
+  const res = await api.post(`/welcome/${reservaId}/register`, data);
   return res.data;
 };
 

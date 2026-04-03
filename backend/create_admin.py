@@ -22,7 +22,7 @@ async def create_admin():
                 email="admin@clearhost.com",
                 password_hash=hashed,
                 telefono="+52 55 0000 0000",
-                rol=RolStaff.ADMIN,
+                rol=RolStaff.SUPER_ADMIN,
             )
             session.add(user)
     

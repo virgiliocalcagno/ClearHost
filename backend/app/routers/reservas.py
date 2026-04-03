@@ -4,7 +4,7 @@ Router de Reservas — CRUD + sincronización iCal.
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -13,8 +13,28 @@ from app.models.reserva import Reserva
 from app.models.propiedad import Propiedad
 from app.schemas.reserva import ReservaCreate, ReservaUpdate, ReservaResponse
 from app.services.task_automation import crear_tarea_para_reserva
+from app.models.tarea_operativa import TareaOperativa, EstadoTarea
 
 router = APIRouter(prefix="/reservas", tags=["Reservas"])
+
+
+@router.post("/scan-id")
+async def scan_id(file: UploadFile = File(...)):
+    """
+    Simulación de OCR con Gemini 1.5 Flash.
+    En producción, procesaría la imagen 'file' para extraer texto.
+    """
+    import asyncio
+    await asyncio.sleep(1.5) # Simular latencia de red/IA
+    
+    # Datos simulados de alta calidad
+    return {
+        "nombre_huesped": "John Doe",
+        "doc_identidad": "ID-9988776655",
+        "nacionalidad": "DOM",
+        "telefono_huesped": "+1 809 123 4567",
+        "message": "Sincronización Inteligente completada"
+    }
 
 
 @router.get("/", response_model=list[ReservaResponse])
@@ -94,11 +114,11 @@ async def crear_reserva(
 
     reserva = Reserva(**data.model_dump())
     db.add(reserva)
-    await db.flush()
+    await db.commit() # Asegurar que esté en la DB para la Background Task
     await db.refresh(reserva)
 
     # Auto-crear tarea de limpieza en background
-    background_tasks.add_task(crear_tarea_para_reserva, reserva.id)
+    background_tasks.add_task(crear_tarea_para_reserva, str(reserva.id))
 
     return reserva
 
@@ -140,7 +160,17 @@ async def cancelar_reserva(
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
 
     reserva.estado = "CANCELADA"
-    await db.flush()
+    
+    # Propagar cancelación a las tareas asociadas
+    tareas_result = await db.execute(
+        select(TareaOperativa).where(TareaOperativa.reserva_id == reserva.id)
+    )
+    tareas = tareas_result.scalars().all()
+    for tarea in tareas:
+        tarea.estado = EstadoTarea.CANCELADA
+        tarea.eliminada_por_nombre = "Sistema (Reserva Cancelada)"
+        
+    await db.commit()
 
 
 @router.post("/sync-ical/{propiedad_id}", response_model=dict)

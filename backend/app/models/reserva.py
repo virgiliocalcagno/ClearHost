@@ -6,7 +6,7 @@ import uuid
 import enum
 from datetime import datetime, date
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, ForeignKey, Enum as SQLEnum
+from sqlalchemy import String, Integer, Date, DateTime, Text, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -43,6 +43,16 @@ class Reserva(Base):
     uid_ical: Mapped[str | None] = mapped_column(String(500), unique=True, nullable=True)
 
     nombre_huesped: Mapped[str] = mapped_column(String(300), nullable=False)
+    doc_identidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    foto_id_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    nacionalidad: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    telefono_huesped: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    telefono_ultimos_4: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    
+    codigo_reserva_canal: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    self_checkin_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    self_checkin_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     check_in: Mapped[date] = mapped_column(Date, nullable=False)
     check_out: Mapped[date] = mapped_column(Date, nullable=False)
     num_huespedes: Mapped[int] = mapped_column(Integer, default=1)
